@@ -1,33 +1,46 @@
-import { useSignal } from "@preact/signals";
 import { Head } from "fresh/runtime";
 import { define } from "../utils.ts";
-import Counter from "../islands/Counter.tsx";
+import { Brand } from "../components/Brand.tsx";
+import JoinGame from "../islands/JoinGame.tsx";
 
-export default define.page(function Home(ctx) {
-  const count = useSignal(3);
-
-  console.log("Shared value " + ctx.state.shared);
-
+export default define.page(function Home() {
   return (
-    <div class="px-4 py-8 mx-auto fresh-gradient min-h-screen">
+    <main class="page-background">
       <Head>
-        <title>Fresh counter</title>
+        <title>Fresh Quiz | Aprenda jogando</title>
       </Head>
-      <div class="max-w-screen-md mx-auto flex flex-col items-center justify-center">
-        <img
-          class="my-6"
-          src="/logo.svg"
-          width="128"
-          height="128"
-          alt="the Fresh logo: a sliced lemon dripping with juice"
-        />
-        <h1 class="text-4xl font-bold">Welcome to Fresh</h1>
-        <p class="my-4">
-          Try updating this message in the
-          <code class="mx-2">./routes/index.tsx</code>, and.
-        </p>
-        <Counter count={count} />
+      <div class="shell">
+        <header class="flex items-center justify-between">
+          <Brand />
+          <a
+            class="text-sm font-bold text-slate-600 transition hover:text-slate-950"
+            href="/host"
+          >
+            Criar partida
+          </a>
+        </header>
+        <section class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Aprendizado em tempo real</p>
+            <h1>
+              Conhecimento que vira <span class="text-coral">jogo.</span>
+            </h1>
+            <p class="hero-description">
+              Um quiz colaborativo sobre desenvolvimento web, feito com Fresh,
+              Preact e PostgreSQL.
+            </p>
+            <div class="hero-stats">
+              <span>
+                <strong>06</strong> perguntas
+              </span>
+              <span>
+                <strong>20s</strong> por rodada
+              </span>
+            </div>
+          </div>
+          <JoinGame />
+        </section>
       </div>
-    </div>
+    </main>
   );
 });
