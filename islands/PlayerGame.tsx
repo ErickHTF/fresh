@@ -4,6 +4,7 @@ import { IslandMarker } from "../components/IslandMarker.tsx";
 import { shuffleChoices } from "../shared/shuffle.ts";
 import { useGameState } from "./useGameState.ts";
 import { useIslandRenderCount } from "./useIslandRenderCount.ts";
+import { pushTrace } from "./useRenderTrace.ts";
 
 interface PlayerGameProps {
   code: string;
@@ -32,6 +33,10 @@ export default function PlayerGame(
       submitted.value = false;
       feedback.value = "";
       timeExpired.value = false;
+      pushTrace(
+        "efeito",
+        "nova pergunta detectada → reset agrupado (selected/submitted/feedback/timeExpired) → +1 render",
+      );
     }
   }, [state.value?.currentQuestion?.id]);
 
@@ -40,6 +45,7 @@ export default function PlayerGame(
       submitted.value || timeExpired.value || state.value?.status !== "question"
     ) return;
     selected.value = choiceId;
+    pushTrace("clique", "alternativa escolhida → selected → +1 render");
     try {
       const requestStartedAt = performance.now();
       const response = await fetch(`/api/games/${code}/answer`, {
@@ -57,11 +63,19 @@ export default function PlayerGame(
       );
       submitted.value = true;
       feedback.value = "Resposta enviada";
+      pushTrace(
+        "clique",
+        "resposta enviada → submitted/feedback/roundTrip/serverTime agrupados → +1 render",
+      );
     } catch (cause) {
       feedback.value = cause instanceof Error
         ? cause.message
         : "Não foi possível enviar a resposta.";
       selected.value = "";
+      pushTrace(
+        "clique",
+        "erro no envio → feedback/selected agrupados → +1 render",
+      );
     }
   }
 

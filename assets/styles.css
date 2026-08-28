@@ -666,6 +666,143 @@ button:disabled {
   font-size: .8rem;
 }
 
+.trace-panel {
+  margin-top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, .85);
+  box-shadow: 0 24px 70px rgba(24, 34, 48, .08);
+}
+
+.trace-panel summary {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  list-style: none;
+  padding: .8rem 1rem;
+  cursor: pointer;
+}
+
+.trace-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.trace-title {
+  color: var(--ink);
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.trace-count {
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--yellow-soft);
+  padding: .25rem .6rem;
+  color: #756017;
+  font-size: .65rem;
+  font-weight: 950;
+}
+
+.trace-clear {
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: transparent;
+  padding: .3rem .6rem;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.trace-clear:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.trace-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  padding: .8rem 1rem 1rem;
+  font-size: .72rem;
+}
+
+.trace-empty {
+  margin: .25rem 0;
+  color: var(--muted);
+}
+
+.trace-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: .6rem;
+  border-radius: .55rem;
+  background: #fafaf5;
+  padding: .45rem .6rem;
+}
+
+.trace-time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-source {
+  border-radius: 999px;
+  padding: .15rem .45rem;
+  font-size: .58rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.trace-source-clique {
+  background: var(--yellow-soft);
+  color: #756017;
+}
+
+.trace-source-sse {
+  background: var(--green-soft);
+  color: #176044;
+}
+
+.trace-source-efeito {
+  background: #f2efff;
+  color: #5b3df0;
+}
+
+.trace-source-http {
+  background: #eaf9fa;
+  color: #177b85;
+}
+
+.trace-message {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.trace-renders {
+  border-radius: .4rem;
+  background: #fff0ed;
+  padding: .15rem .4rem;
+  color: #a13c34;
+  font-size: .62rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .trace-row {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .trace-time {
+    display: none;
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

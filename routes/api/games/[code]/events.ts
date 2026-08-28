@@ -27,7 +27,7 @@ export const handler = define.handlers({
             );
           }
         };
-        unsubscribe = subscribe(ctx.params.code, () => void sendState());
+        unsubscribe = subscribe(ctx.params.code, sendState);
         void sendState();
         heartbeat = setInterval(
           () => controller.enqueue(encoder.encode(": ping\n\n")),
