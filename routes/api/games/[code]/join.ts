@@ -8,6 +8,7 @@ import {
 import { joinGame } from "../../../../server/game.ts";
 import { notify } from "../../../../server/events.ts";
 import { body, errorResponse, json } from "../../../../server/http.ts";
+import { logRequest, logResponse, timeAction } from "../../../../server/log.ts";
 
 interface JoinBody {
   nickname?: string;
@@ -15,9 +16,16 @@ interface JoinBody {
 
 export const handler = define.handlers({
   async POST(ctx) {
+    const code = ctx.params.code.toUpperCase();
+    const path = `/api/games/${code}/join`;
+    const startedAt = performance.now();
+    logRequest("POST", path);
     try {
       const { nickname } = await body<JoinBody>(ctx.req);
-      const session = await joinGame(ctx.params.code, nickname ?? "");
+      const session = await timeAction(
+        "joinGame",
+        () => joinGame(code, nickname ?? ""),
+      );
       const response = json({ nickname: session.nickname, code: session.code });
       setSessionCookie(
         response.headers,
@@ -34,7 +42,8 @@ export const handler = define.handlers({
         orderCookieName(session.code),
         session.playerId,
       );
-      notify(session.code);
+      await notify(session.code);
+      logResponse("POST", path, performance.now() - startedAt);
       return response;
     } catch (error) {
       return errorResponse(error);
