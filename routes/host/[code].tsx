@@ -11,7 +11,7 @@ export default define.page(function HostGamePage(ctx) {
         <title>Sala {code} | Fresh Quiz</title>
       </Head>
       <main class="shell">
-        <div class="game-page-layout">
+        <div class="game-layout">
           <HostGame code={code} />
           <HostRanking code={code} />
         </div>

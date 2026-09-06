@@ -45,7 +45,7 @@ export default function JoinGame({ initialCode = "" }: JoinGameProps) {
 
   return (
     <form
-      class="panel island-surface island-surface-join space-y-5"
+      class="island island-join"
       onSubmit={join}
     >
       <div>

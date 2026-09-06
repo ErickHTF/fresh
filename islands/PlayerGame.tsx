@@ -1,5 +1,6 @@
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { Countdown } from "../components/Countdown.tsx";
 import { shuffleChoices } from "../shared/shuffle.ts";
 import { useGameState } from "./useGameState.ts";
 
@@ -69,9 +70,21 @@ export default function PlayerGame(
     : [];
   const player = gameState?.players.find((item) => item.nickname === nickname);
 
+  const answerCounts = current?.answerCounts ?? {};
+  const totalAnswers = Object.values(answerCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  const showVotes = gameState?.status === "question" && submitted.value &&
+    totalAnswers > 0;
+  const shareOf = (choiceId: string) => {
+    if (totalAnswers === 0) return 0;
+    return Math.round(((answerCounts[choiceId] ?? 0) / totalAnswers) * 100);
+  };
+
   return (
-    <section class="island-surface island-surface-player player-game-island">
-      <section class="game-header">
+    <section class="island island-player">
+      <div class="game-header">
         <div>
           <p class="eyebrow">Você está jogando em</p>
           <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">
@@ -79,7 +92,7 @@ export default function PlayerGame(
           </h1>
         </div>
         <div class="header-actions">
-          <div class="score-pill">{player?.score ?? 0} pts</div>
+          <span class="score-pill">{player?.score ?? 0} pts</span>
           <button
             class="button button-ghost"
             onClick={() => void leaveRoom()}
@@ -88,40 +101,40 @@ export default function PlayerGame(
             Sair
           </button>
         </div>
-      </section>
+      </div>
+
       {(error.value || feedback.value) && (
-        <p class={error.value ? "error-message mb-5" : "success-message mb-5"}>
+        <p class={error.value ? "error-message" : "success-message"}>
           {error.value || feedback.value}
         </p>
       )}
-      {!gameState && (
-        <section class="panel">
-          <LoadingState />
-        </section>
-      )}
+
+      {!gameState && <LoadingState />}
+
       {gameState?.status === "lobby" && (
-        <section class="panel empty-state min-h-[22rem]">
+        <div class="empty-state">
           <span class="empty-icon">02</span>
           <h2>Você entrou!</h2>
           <p>Aguarde o host começar o quiz.</p>
-        </section>
+        </div>
       )}
+
       {gameState && current && gameState.status !== "lobby" &&
         gameState.status !== "finished" && (
-        <section class="panel space-y-6">
-          <div class="flex items-center justify-between gap-4">
+        <div class="question-view">
+          <div class="question-meta">
             <p class="eyebrow">
               Pergunta {gameState.currentQuestionPosition} de{" "}
               {gameState.totalQuestions}
             </p>
-            <Countdown
-              deadlineAt={gameState.deadlineAt}
-              onExpired={() => timeExpired.value = true}
-            />
+            {gameState.status === "question" && (
+              <Countdown
+                deadlineAt={gameState.deadlineAt}
+                onExpired={() => timeExpired.value = true}
+              />
+            )}
           </div>
-          <h2 class="text-3xl font-black leading-tight text-slate-950">
-            {current.prompt}
-          </h2>
+          <h2 class="question-title">{current.prompt}</h2>
           <div class="choice-grid">
             {choices.map((choice) => {
               const correct = gameState.status === "reveal" &&
@@ -142,64 +155,40 @@ export default function PlayerGame(
                   type="button"
                 >
                   <span class="choice-index">{choice.position}</span>
-                  <span>{choice.label}</span>
+                  <span class="choice-body">
+                    <span>{choice.label}</span>
+                    {showVotes && (
+                      <span class="vote-track">
+                        <span
+                          class="vote-fill"
+                          style={{ width: `${shareOf(choice.id)}%` }}
+                        />
+                      </span>
+                    )}
+                  </span>
+                  {showVotes && (
+                    <span class="vote-pct">{shareOf(choice.id)}%</span>
+                  )}
                 </button>
               );
             })}
           </div>
           {gameState.status === "question" && submitted.value && (
-            <p class="text-center text-sm font-bold text-slate-500">
+            <p class="waiting-note">
               Aguardando os outros jogadores...
             </p>
           )}
-        </section>
+        </div>
       )}
+
       {gameState?.status === "finished" && (
-        <section class="panel space-y-5">
-          <div class="empty-state min-h-0">
-            <span class="empty-icon">🏆</span>
-            <h2>Fim de jogo</h2>
-            <p>Veja sua posição no ranking ao lado.</p>
-          </div>
-        </section>
+        <div class="empty-state empty-state-compact">
+          <span class="empty-icon">🏆</span>
+          <h2>Fim de jogo</h2>
+          <p>Veja sua posição no ranking ao lado.</p>
+        </div>
       )}
     </section>
-  );
-}
-
-interface CountdownProps {
-  deadlineAt: string | null;
-  onExpired: () => void;
-}
-
-function Countdown({ deadlineAt, onExpired }: CountdownProps) {
-  const remaining = useSignal(0);
-
-  useEffect(() => {
-    let expired = false;
-
-    function update() {
-      if (!deadlineAt) return;
-      const next = Math.max(
-        0,
-        Math.ceil((new Date(deadlineAt).getTime() - Date.now()) / 1000),
-      );
-      remaining.value = next;
-      if (next === 0 && !expired) {
-        expired = true;
-        onExpired();
-      }
-    }
-
-    update();
-    const timer = setInterval(update, 250);
-    return () => clearInterval(timer);
-  }, [deadlineAt]);
-
-  return (
-    <div class={`timer ${remaining.value <= 5 ? "timer-warning" : ""}`}>
-      {remaining.value}s
-    </div>
   );
 }
 

@@ -18,7 +18,7 @@ export default define.page(function PlayerGamePage(ctx) {
         <title>Jogar {code} | Fresh Quiz</title>
       </Head>
       <main class="shell">
-        <div class="player-layout">
+        <div class="game-layout">
           <PlayerGame code={code} nickname={nickname} orderSeed={orderSeed} />
           <LiveRanking code={code} nickname={nickname} />
         </div>
