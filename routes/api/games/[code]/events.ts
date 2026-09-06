@@ -7,10 +7,12 @@ const encoder = new TextEncoder();
 
 export const handler = define.handlers({
   async GET(ctx) {
-    if (!await authorize(ctx.req, ctx.params.code)) {
+    const code = ctx.params.code.toUpperCase();
+    const role = await authorize(ctx.req, code);
+    if (!role) {
       return new Response("Não autorizado.", { status: 401 });
     }
-    const state = await getState(ctx.params.code);
+    const state = await getState(code);
     if (!state) return new Response("Sala não encontrada.", { status: 404 });
 
     let unsubscribe: (() => void) | undefined;
@@ -18,7 +20,7 @@ export const handler = define.handlers({
     const stream = new ReadableStream({
       start(controller) {
         const sendState = async () => {
-          const currentState = await getState(ctx.params.code);
+          const currentState = await getState(code);
           if (currentState) {
             controller.enqueue(
               encoder.encode(
@@ -27,7 +29,7 @@ export const handler = define.handlers({
             );
           }
         };
-        unsubscribe = subscribe(ctx.params.code, sendState);
+        unsubscribe = subscribe(code, sendState);
         void sendState();
         heartbeat = setInterval(
           () => controller.enqueue(encoder.encode(": ping\n\n")),
