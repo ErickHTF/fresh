@@ -1,19 +1,15 @@
-import { IslandMarker } from "../components/IslandMarker.tsx";
 import { useGameState } from "./useGameState.ts";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
 
 interface HostRankingProps {
   code: string;
 }
 
 export default function HostRanking({ code }: HostRankingProps) {
-  const renderCount = useIslandRenderCount();
   const { state, error, connection } = useGameState(code);
   const players = state.value?.players ?? [];
 
   return (
     <aside class="island-surface island-surface-host ranking-island">
-      <IslandMarker count={renderCount} name="HostRanking" tone="host" />
       <div class="ranking-heading">
         <div>
           <p class="eyebrow">Placar ao vivo</p>

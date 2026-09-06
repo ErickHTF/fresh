@@ -1,6 +1,4 @@
-import { IslandMarker } from "../components/IslandMarker.tsx";
 import { useGameState } from "./useGameState.ts";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
 
 interface LiveRankingProps {
   code: string;
@@ -8,13 +6,11 @@ interface LiveRankingProps {
 }
 
 export default function LiveRanking({ code, nickname }: LiveRankingProps) {
-  const renderCount = useIslandRenderCount();
   const { state, error, connection } = useGameState(code);
   const players = state.value?.players ?? [];
 
   return (
     <aside class="island-surface island-surface-ranking ranking-island">
-      <IslandMarker count={renderCount} name="LiveRanking" tone="ranking" />
       <div class="ranking-heading">
         <div>
           <p class="eyebrow">Placar ao vivo</p>

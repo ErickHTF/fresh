@@ -1,17 +1,13 @@
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
-import { IslandMarker } from "../components/IslandMarker.tsx";
 import type { GameState } from "../shared/types.ts";
 import { useGameState } from "./useGameState.ts";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
-import { pushTrace } from "./useRenderTrace.ts";
 
 interface HostGameProps {
   code: string;
 }
 
 export default function HostGame({ code }: HostGameProps) {
-  const renderCount = useIslandRenderCount();
   const { state, error } = useGameState(code);
   const actionError = useSignal("");
   const loading = useSignal(false);
@@ -25,7 +21,6 @@ export default function HostGame({ code }: HostGameProps) {
   ) {
     loading.value = true;
     actionError.value = "";
-    pushTrace("clique", `"${path}" → loading=true → +1 render`);
     try {
       const response = await fetch(`/api/games/${code}/${path}`, {
         method: "POST",
@@ -43,10 +38,6 @@ export default function HostGame({ code }: HostGameProps) {
         : "Não foi possível atualizar a partida.";
     } finally {
       loading.value = false;
-      pushTrace(
-        "clique",
-        `resposta do POST ${path} → loading=false → +1 render`,
-      );
     }
   }
 
@@ -88,7 +79,6 @@ export default function HostGame({ code }: HostGameProps) {
 
   return (
     <section class="island-surface island-surface-host host-game-island">
-      <IslandMarker count={renderCount} name="HostGame" tone="host" />
       <section class="game-header">
         <div>
           <p class="eyebrow">Você conduz em</p>

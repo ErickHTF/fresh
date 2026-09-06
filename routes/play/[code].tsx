@@ -1,7 +1,6 @@
 import { Head } from "fresh/runtime";
 import LiveRanking from "../../islands/LiveRanking.tsx";
 import PlayerGame from "../../islands/PlayerGame.tsx";
-import TracePanel from "../../islands/TracePanel.tsx";
 import {
   getCookie,
   nicknameCookieName,
@@ -23,7 +22,6 @@ export default define.page(function PlayerGamePage(ctx) {
           <PlayerGame code={code} nickname={nickname} orderSeed={orderSeed} />
           <LiveRanking code={code} nickname={nickname} />
         </div>
-        <TracePanel />
       </main>
     </>
   );

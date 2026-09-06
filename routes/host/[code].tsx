@@ -1,7 +1,6 @@
 import { Head } from "fresh/runtime";
 import HostGame from "../../islands/HostGame.tsx";
 import HostRanking from "../../islands/HostRanking.tsx";
-import TracePanel from "../../islands/TracePanel.tsx";
 import { define } from "../../utils.ts";
 
 export default define.page(function HostGamePage(ctx) {
@@ -16,7 +15,6 @@ export default define.page(function HostGamePage(ctx) {
           <HostGame code={code} />
           <HostRanking code={code} />
         </div>
-        <TracePanel />
       </main>
     </>
   );
