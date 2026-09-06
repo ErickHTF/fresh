@@ -1,12 +1,14 @@
 import { calculatePoints, isDeadlineExpired } from "../shared/game-state.ts";
 import type { GameSession, GameState, PlayerSession } from "../shared/types.ts";
 import { sql } from "./db.ts";
+import { notify } from "./events.ts";
 
 interface GameRow {
   id: string;
   quiz_id: string;
   code: string;
   host_token: string;
+  host_nickname: string | null;
   status: GameState["status"];
   current_question_position: number;
   question_started_at: Date | null;
@@ -35,10 +37,74 @@ function createCode(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+const revealTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleReveal(
+  gameId: string,
+  code: string,
+  deadlineAt: Date,
+): void {
+  const previous = revealTimers.get(gameId);
+  if (previous) clearTimeout(previous);
+  const delay = Math.max(0, deadlineAt.getTime() - Date.now());
+  const timer = setTimeout(async () => {
+    revealTimers.delete(gameId);
+    try {
+      await revealCurrentQuestion(code);
+      await notify(code);
+    } catch {
+      // A partida pode ter mudado entre o agendamento e a execução.
+    }
+  }, delay);
+  revealTimers.set(gameId, timer);
+}
+
+function cancelReveal(gameId: string): void {
+  const previous = revealTimers.get(gameId);
+  if (previous) clearTimeout(previous);
+  revealTimers.delete(gameId);
+}
+
+export async function cancelPendingReveal(code: string): Promise<void> {
+  const game = await getGame(code);
+  if (game) cancelReveal(game.id);
+}
+
+export async function revealCurrentQuestion(code: string): Promise<void> {
+  const game = await getGame(code);
+  if (!game || game.status !== "question") return;
+  cancelReveal(game.id);
+  await sql.begin(async (transaction) => {
+    const updated = await transaction`
+      UPDATE games
+      SET status = 'reveal'
+      WHERE id = ${game.id} AND status = 'question'
+      RETURNING id
+    `;
+    if (updated.count !== 1) return;
+    await transaction`
+      UPDATE game_players gp
+      SET score = gp.score + COALESCE((
+        SELECT SUM(a.points)
+        FROM answers a
+        WHERE a.game_id = ${game.id}
+          AND a.player_id = gp.player_id
+          AND a.question_id = (
+            SELECT id
+            FROM questions
+            WHERE quiz_id = ${game.quiz_id}
+              AND position = ${game.current_question_position}
+          )
+      ), 0)
+      WHERE gp.game_id = ${game.id}
+    `;
+  });
+}
+
 async function getGame(code: string): Promise<GameRow | null> {
   const rows = await sql<GameRow[]>`
-    SELECT id, quiz_id, code, host_token, status, current_question_position,
-      question_started_at, question_deadline_at
+    SELECT id, quiz_id, code, host_token, host_nickname, status,
+      current_question_position, question_started_at, question_deadline_at
     FROM games
     WHERE code = ${code.toUpperCase()}
   `;
@@ -66,19 +132,20 @@ async function getQuestionChoices(questionId: string): Promise<ChoiceRow[]> {
   `;
 }
 
-export async function createGame(): Promise<GameSession> {
+export async function createGame(nickname: string): Promise<GameSession> {
   const [quiz] = await sql<{ id: string }[]>`
     SELECT id FROM quizzes ORDER BY created_at LIMIT 1
   `;
   if (!quiz) throw new Error("Nenhum quiz disponível.");
+  const cleanNickname = normalizeNickname(nickname);
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = createCode();
     const hostToken = createToken();
     try {
       await sql`
-        INSERT INTO games (id, quiz_id, code, host_token, status)
-        VALUES (${createToken()}, ${quiz.id}, ${code}, ${hostToken}, 'lobby')
+        INSERT INTO games (id, quiz_id, code, host_token, host_nickname, status)
+        VALUES (${createToken()}, ${quiz.id}, ${code}, ${hostToken}, ${cleanNickname}, 'lobby')
       `;
       return { code, hostToken };
     } catch (error) {
@@ -90,6 +157,12 @@ export async function createGame(): Promise<GameSession> {
     }
   }
   throw new Error("Não foi possível gerar o código da sala.");
+}
+
+function normalizeNickname(nickname: string): string {
+  const clean = nickname.trim().slice(0, 24);
+  if (clean.length < 2) throw new Error("Informe um apelido válido.");
+  return clean;
 }
 
 export async function verifyHost(
@@ -107,9 +180,7 @@ export async function joinGame(
   const game = await getGame(code);
   if (!game) throw new Error("Sala não encontrada.");
   if (game.status !== "lobby") throw new Error("A partida já começou.");
-
-  const cleanNickname = nickname.trim().slice(0, 24);
-  if (cleanNickname.length < 2) throw new Error("Informe um apelido válido.");
+  const cleanNickname = normalizeNickname(nickname);
 
   const playerToken = createToken();
   const playerId = createToken();
@@ -141,9 +212,62 @@ export async function verifyPlayer(
   return Boolean(rows[0]);
 }
 
-export async function getState(code: string): Promise<GameState | null> {
+async function getPlayerIdByToken(
+  gameId: string,
+  playerToken: string,
+): Promise<string | null> {
+  const rows = await sql<{ id: string }[]>`
+    SELECT p.id
+    FROM players p
+    JOIN game_players gp ON gp.player_id = p.id
+    WHERE gp.game_id = ${gameId} AND p.player_token = ${playerToken}
+  `;
+  return rows[0]?.id ?? null;
+}
+
+async function hasAnsweredQuestion(
+  gameId: string,
+  questionId: string,
+  playerId: string,
+): Promise<boolean> {
+  const rows = await sql<{ answered: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM answers
+      WHERE game_id = ${gameId} AND question_id = ${questionId}
+        AND player_id = ${playerId}
+    ) AS answered
+  `;
+  return rows[0]?.answered ?? false;
+}
+
+async function getAnswerCounts(
+  gameId: string,
+  questionId: string,
+): Promise<Record<string, number>> {
+  const rows = await sql<{ choice_id: string; count: number }[]>`
+    SELECT choice_id, count(*)::int AS count
+    FROM answers
+    WHERE game_id = ${gameId} AND question_id = ${questionId}
+    GROUP BY choice_id
+  `;
+  return Object.fromEntries(rows.map((row) => [row.choice_id, row.count]));
+}
+
+export interface StateViewer {
+  role?: "host" | "player";
+  playerToken?: string;
+}
+
+export async function getState(
+  code: string,
+  viewer: StateViewer = {},
+): Promise<GameState | null> {
   const game = await getGame(code);
   if (!game) return null;
+
+  if (game.status === "question" && game.question_deadline_at) {
+    scheduleReveal(game.id, game.code, game.question_deadline_at);
+  }
 
   const [questionCount] = await sql<{ count: number }[]>`
     SELECT count(*)::int AS count FROM questions WHERE quiz_id = ${game.quiz_id}
@@ -179,6 +303,9 @@ export async function getState(code: string): Promise<GameState | null> {
     if (question) {
       const choices = await getQuestionChoices(question.id);
       const isRevealed = game.status === "reveal" || game.status === "finished";
+      const answerCounts = isRevealed
+        ? await getAnswerCounts(game.id, question.id)
+        : await maybeAnswerCounts(game, question.id, viewer);
       currentQuestion = {
         id: question.id,
         position: question.position,
@@ -192,6 +319,7 @@ export async function getState(code: string): Promise<GameState | null> {
         correctChoiceId: isRevealed
           ? choices.find((choice) => choice.is_correct)?.id ?? null
           : null,
+        ...(answerCounts ? { answerCounts } : {}),
       };
     }
   }
@@ -199,6 +327,7 @@ export async function getState(code: string): Promise<GameState | null> {
   return {
     code: game.code,
     status: game.status,
+    hostNickname: game.host_nickname,
     currentQuestion,
     currentQuestionPosition: game.current_question_position,
     totalQuestions: Number(questionCount?.count ?? 0),
@@ -210,6 +339,22 @@ export async function getState(code: string): Promise<GameState | null> {
       hasAnswered: player.has_answered,
     })),
   };
+}
+
+async function maybeAnswerCounts(
+  game: GameRow,
+  questionId: string,
+  viewer: StateViewer,
+): Promise<Record<string, number> | null> {
+  if (viewer.role === "host") {
+    return await getAnswerCounts(game.id, questionId);
+  }
+  if (!viewer.playerToken) return null;
+  const playerId = await getPlayerIdByToken(game.id, viewer.playerToken);
+  if (!playerId || !await hasAnsweredQuestion(game.id, questionId, playerId)) {
+    return null;
+  }
+  return await getAnswerCounts(game.id, questionId);
 }
 
 export async function startGame(code: string): Promise<void> {
@@ -230,6 +375,7 @@ export async function startGame(code: string): Promise<void> {
       question_started_at = ${startedAt}, question_deadline_at = ${deadlineAt}
     WHERE id = ${game.id} AND status = 'lobby'
   `;
+  scheduleReveal(game.id, game.code, deadlineAt);
 }
 
 export async function submitAnswer(
@@ -285,39 +431,14 @@ export async function advanceGame(code: string): Promise<void> {
   if (!game) throw new Error("Sala não encontrada.");
 
   if (game.status === "question") {
-    await sql.begin(async (transaction) => {
-      const updated = await transaction`
-        UPDATE games
-        SET status = 'reveal'
-        WHERE id = ${game.id} AND status = 'question'
-        RETURNING id
-      `;
-      if (updated.count !== 1) throw new Error("A pergunta já foi revelada.");
-
-      await transaction`
-        UPDATE game_players gp
-        SET score = gp.score + COALESCE((
-          SELECT SUM(a.points)
-          FROM answers a
-          WHERE a.game_id = ${game.id}
-            AND a.player_id = gp.player_id
-            AND a.question_id = (
-              SELECT id
-              FROM questions
-              WHERE quiz_id = ${game.quiz_id}
-                AND position = ${game.current_question_position}
-            )
-        ), 0)
-        WHERE gp.game_id = ${game.id}
-      `;
-    });
-    return;
+    throw new Error("Aguarde o tempo da pergunta terminar.");
   }
   if (game.status !== "reveal") throw new Error("A partida não pode avançar.");
 
   const nextPosition = game.current_question_position + 1;
   const nextQuestion = await getQuestion(game.quiz_id, nextPosition);
   if (!nextQuestion) {
+    cancelReveal(game.id);
     await sql`UPDATE games SET status = 'finished', question_deadline_at = NULL WHERE id = ${game.id}`;
     return;
   }
@@ -334,6 +455,7 @@ export async function advanceGame(code: string): Promise<void> {
     RETURNING id
   `;
   if (updated.count !== 1) throw new Error("A partida não pode avançar.");
+  scheduleReveal(game.id, game.code, deadlineAt);
 }
 
 export async function finishGame(code: string): Promise<void> {
@@ -342,6 +464,7 @@ export async function finishGame(code: string): Promise<void> {
   if (game.status !== "question" && game.status !== "reveal") {
     throw new Error("O quiz não está em andamento.");
   }
+  cancelReveal(game.id);
   await sql`
     UPDATE games
     SET status = 'finished', question_deadline_at = NULL
@@ -355,6 +478,7 @@ export async function restartGame(code: string): Promise<void> {
   if (game.status !== "finished") {
     throw new Error("A partida ainda não terminou.");
   }
+  cancelReveal(game.id);
   await sql.begin(async (transaction) => {
     await transaction`DELETE FROM answers WHERE game_id = ${game.id}`;
     await transaction`
