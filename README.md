@@ -13,10 +13,22 @@ Preact, SSE e PostgreSQL.
 ```bash
 cp .env.example .env
 docker compose up -d
-deno task db:migrate
-deno task db:seed
 deno task dev
 ```
+
+Ao criar o container do Postgres, o `docker-entrypoint-initdb.d` aplica
+automaticamente as migrações de `db/migrations/` e o seed
+(`db/seed/001_web_basics.sql`). Para recriar o banco do zero:
+
+```bash
+docker compose down -v && docker compose up -d
+```
+
+Se preferir rodar as tarefas manualmente (por exemplo, contra um banco já
+existente), use `deno task db:migrate` e `deno task db:seed`.
+
+O Postgres é publicado na porta `5433` da máquina para não conflitar com outros
+projetos locais; ajuste `DATABASE_URL` em `.env` se necessário.
 
 Abra `http://localhost:5173/` para entrar em uma partida ou `/host` para criar
 uma sala.
@@ -35,25 +47,28 @@ APIs.
 
 ## Ciclo da partida
 
-- Host cria a sala em `/host` e compartilha o código.
+- Host cria a sala em `/host` com um apelido e compartilha o código.
 - Jogadores entram pela página inicial com um apelido.
-- O host conduz: começar, revelar resposta, próxima pergunta ou encerrar antes
-  do fim ("Encerrar quiz").
+- O nome do host aparece em destaque, em seção separada do ranking, para todos.
+- O host acompanha a votação ao vivo (com timer até a revelação) e começa o
+  quiz; a resposta de cada pergunta é revelada automaticamente quando o tempo
+  acaba. Depois da revelação, o host avança para a próxima pergunta (ou para o
+  resultado final) ou encerra antes do fim ("Encerrar quiz").
 - Ao final, "Jogar novamente" devolve a sala ao lobby zerando placar e respostas
   — os jogadores conectados permanecem na sala.
 - "Sair da sala" (host) e "Sair" (jogador) limparam os cookies da sessão.
 
 ## API
 
-| Método | Rota                       | Descrição                                    |
-| ------ | -------------------------- | -------------------------------------------- |
-| POST   | `/api/games`               | Cria sala (define cookie de host).           |
-| POST   | `/api/games/:code/join`    | Entra na sala (define cookies do jogador).   |
-| GET    | `/api/games/:code/state`   | Estado atual da partida.                     |
-| GET    | `/api/games/:code/events`  | Stream SSE com o estado em tempo real.       |
-| POST   | `/api/games/:code/start`   | Inicia a primeira pergunta (host).           |
-| POST   | `/api/games/:code/answer`  | Registra a resposta do jogador.              |
-| POST   | `/api/games/:code/next`    | Revela resposta ou avança a pergunta (host). |
-| POST   | `/api/games/:code/finish`  | Encerra o quiz antecipadamente (host).       |
-| POST   | `/api/games/:code/restart` | Volta ao lobby zerando placar (host).        |
-| POST   | `/api/games/:code/leave`   | Limpa os cookies da sessão.                  |
+| Método | Rota                       | Descrição                                  |
+| ------ | -------------------------- | ------------------------------------------ |
+| POST   | `/api/games`               | Cria sala (define cookie de host).         |
+| POST   | `/api/games/:code/join`    | Entra na sala (define cookies do jogador). |
+| GET    | `/api/games/:code/state`   | Estado atual da partida.                   |
+| GET    | `/api/games/:code/events`  | Stream SSE com o estado em tempo real.     |
+| POST   | `/api/games/:code/start`   | Inicia a primeira pergunta (host).         |
+| POST   | `/api/games/:code/answer`  | Registra a resposta do jogador.            |
+| POST   | `/api/games/:code/next`    | Avança a pergunta revelada (host).         |
+| POST   | `/api/games/:code/finish`  | Encerra o quiz antecipadamente (host).     |
+| POST   | `/api/games/:code/restart` | Volta ao lobby zerando placar (host).      |
+| POST   | `/api/games/:code/leave`   | Limpa os cookies da sessão.                |
