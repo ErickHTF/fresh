@@ -7,9 +7,11 @@ services:
       POSTGRES_USER: fresh
       POSTGRES_PASSWORD: fresh
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d/01-migrations:ro
+      - ./db/seed/001_web_basics.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fresh -d fresh_quiz"]
       interval: 5s
