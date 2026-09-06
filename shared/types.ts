@@ -13,6 +13,7 @@ export interface CurrentQuestion {
   durationSeconds: number;
   choices: Choice[];
   correctChoiceId: string | null;
+  answerCounts?: Record<string, number>;
 }
 
 export interface PlayerSummary {
@@ -25,6 +26,7 @@ export interface PlayerSummary {
 export interface GameState {
   code: string;
   status: GameStatus;
+  hostNickname: string | null;
   currentQuestion: CurrentQuestion | null;
   currentQuestionPosition: number;
   totalQuestions: number;

@@ -1,12 +1,17 @@
 import { define } from "../../utils.ts";
 import { hostCookieName, setSessionCookie } from "../../server/cookies.ts";
 import { createGame } from "../../server/game.ts";
-import { errorResponse, json } from "../../server/http.ts";
+import { body, errorResponse, json } from "../../server/http.ts";
+
+interface CreateGameBody {
+  nickname?: string;
+}
 
 export const handler = define.handlers({
-  async POST() {
+  async POST(ctx) {
     try {
-      const session = await createGame();
+      const { nickname } = await body<CreateGameBody>(ctx.req);
+      const session = await createGame(nickname ?? "");
       const response = json({ code: session.code });
       setSessionCookie(
         response.headers,

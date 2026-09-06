@@ -1,5 +1,6 @@
 import { define } from "../../../../utils.ts";
 import { authorize } from "../../../../server/auth.ts";
+import { getCookie, playerCookieName } from "../../../../server/cookies.ts";
 import { subscribe } from "../../../../server/events.ts";
 import { getState } from "../../../../server/game.ts";
 
@@ -12,7 +13,8 @@ export const handler = define.handlers({
     if (!role) {
       return new Response("Não autorizado.", { status: 401 });
     }
-    const state = await getState(code);
+    const playerToken = getCookie(ctx.req, playerCookieName(code));
+    const state = await getState(code, { role, playerToken });
     if (!state) return new Response("Sala não encontrada.", { status: 404 });
 
     let unsubscribe: (() => void) | undefined;
@@ -20,7 +22,7 @@ export const handler = define.handlers({
     const stream = new ReadableStream({
       start(controller) {
         const sendState = async () => {
-          const currentState = await getState(code);
+          const currentState = await getState(code, { role, playerToken });
           if (currentState) {
             controller.enqueue(
               encoder.encode(
