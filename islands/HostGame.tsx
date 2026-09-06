@@ -1,5 +1,6 @@
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { Countdown } from "../components/Countdown.tsx";
 import type { GameState } from "../shared/types.ts";
 import { useGameState } from "./useGameState.ts";
 
@@ -67,19 +68,29 @@ export default function HostGame({ code }: HostGameProps) {
 
   const gameState = state.value;
   const current = gameState?.currentQuestion;
+
+  const answerCounts = current?.answerCounts ?? {};
+  const totalAnswers = Object.values(answerCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  const shareOf = (choiceId: string) => {
+    if (totalAnswers === 0) return 0;
+    return Math.round(((answerCounts[choiceId] ?? 0) / totalAnswers) * 100);
+  };
+  const showVotes = Boolean(current?.answerCounts);
+
   const actionLabel = gameState?.status === "lobby"
     ? "Começar quiz"
-    : gameState?.status === "question"
-    ? "Revelar resposta"
     : gameState?.status === "reveal"
     ? gameState.currentQuestionPosition === gameState.totalQuestions
       ? "Ver resultado final"
       : "Próxima pergunta"
-    : "Quiz encerrado";
+    : "";
 
   return (
-    <section class="island-surface island-surface-host host-game-island">
-      <section class="game-header">
+    <section class="island island-host">
+      <div class="game-header">
         <div>
           <p class="eyebrow">Você conduz em</p>
           <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">
@@ -94,98 +105,138 @@ export default function HostGame({ code }: HostGameProps) {
             Sair da sala
           </button>
         </div>
-      </section>
+      </div>
 
       {(error.value || actionError.value) && (
-        <p class="error-message mb-5">{error.value || actionError.value}</p>
+        <p class="error-message">{error.value || actionError.value}</p>
       )}
 
-      <section class="panel space-y-6">
-        {!gameState && <LoadingState />}
-        {gameState?.status === "lobby" && (
-          <div class="empty-state min-h-[22rem]">
-            <span class="empty-icon">01</span>
-            <h2>Aguardando jogadores</h2>
-            <p>
-              Compartilhe o código da sala e comece quando todos estiverem
-              prontos.
+      {!gameState && <LoadingState />}
+
+      {gameState?.status === "lobby" && (
+        <div class="empty-state">
+          <span class="empty-icon">01</span>
+          <h2>Aguardando jogadores</h2>
+          <p>
+            Compartilhe o código da sala e comece quando todos estiverem
+            prontos.
+          </p>
+        </div>
+      )}
+
+      {gameState && current && gameState.status !== "lobby" &&
+        gameState.status !== "finished" && (
+        <div class="question-view">
+          <div class="question-meta">
+            <p class="eyebrow">
+              Pergunta {gameState.currentQuestionPosition} de{" "}
+              {gameState.totalQuestions}
             </p>
-          </div>
-        )}
-        {gameState && current && gameState.status !== "lobby" && (
-          <div class="space-y-6">
-            <div class="flex items-center justify-between gap-4">
-              <p class="eyebrow">
-                Pergunta {gameState.currentQuestionPosition} de{" "}
-                {gameState.totalQuestions}
-              </p>
+            <div class="question-meta-actions">
               <span class={`status status-${gameState.status}`}>
                 {statusLabel(gameState.status)}
               </span>
-            </div>
-            <h2 class="text-3xl font-black leading-tight text-slate-950">
-              {current.prompt}
-            </h2>
-            <div class="choice-grid">
-              {current.choices.map((choice) => (
-                <div
-                  class={`choice-card ${
-                    current.correctChoiceId === choice.id
-                      ? "choice-correct"
-                      : ""
-                  }`}
-                  key={choice.id}
-                >
-                  <span class="choice-index">{choice.position}</span>
-                  <span>{choice.label}</span>
-                </div>
-              ))}
+              {gameState.status === "question" && (
+                <Countdown deadlineAt={gameState.deadlineAt} />
+              )}
             </div>
           </div>
-        )}
-        {gameState?.status === "finished" && (
-          <>
-            <div class="empty-state min-h-[22rem]">
-              <span class="empty-icon">OK</span>
-              <h2>Quiz encerrado</h2>
-              <p>Confira o ranking final na island ao lado.</p>
+          <h2 class="question-title">{current.prompt}</h2>
+          {showVotes && (
+            <div class="votes-summary">
+              <span class="eyebrow">
+                {gameState.status === "question"
+                  ? "Votação ao vivo"
+                  : "Votos por alternativa"}
+              </span>
+              <span class="votes-summary-count">
+                {totalAnswers} de {gameState.players.length} responderam
+              </span>
             </div>
-            <button
-              class="button button-primary w-full"
-              disabled={loading.value}
-              onClick={restartQuiz}
-              type="button"
-            >
-              {loading.value ? "Reiniciando..." : "Jogar novamente"}
-            </button>
-          </>
-        )}
-        {gameState && gameState.status !== "finished" && (
-          <div class="actions-row">
-            <button
-              class="button button-primary flex-1"
-              disabled={loading.value ||
-                (gameState.status === "lobby" &&
-                  gameState.players.length === 0)}
-              onClick={() =>
-                void action(gameState.status === "lobby" ? "start" : "next")}
-              type="button"
-            >
-              {loading.value ? "Atualizando..." : actionLabel}
-            </button>
-            {gameState.status !== "lobby" && (
+          )}
+          <div class="choice-grid">
+            {current.choices.map((choice) => (
+              <div
+                class={`choice-card ${
+                  current.correctChoiceId === choice.id ? "choice-correct" : ""
+                }`}
+                key={choice.id}
+              >
+                <span class="choice-index">{choice.position}</span>
+                <span class="choice-body">
+                  <span>{choice.label}</span>
+                  {showVotes && (
+                    <span class="vote-track">
+                      <span
+                        class="vote-fill"
+                        style={{ width: `${shareOf(choice.id)}%` }}
+                      />
+                    </span>
+                  )}
+                </span>
+                {showVotes && (
+                  <span class="vote-pct">{shareOf(choice.id)}%</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {gameState?.status === "finished" && (
+        <>
+          <div class="empty-state">
+            <span class="empty-icon">OK</span>
+            <h2>Quiz encerrado</h2>
+            <p>Confira o ranking final na island ao lado.</p>
+          </div>
+          <button
+            class="button button-primary w-full"
+            disabled={loading.value}
+            onClick={restartQuiz}
+            type="button"
+          >
+            {loading.value ? "Reiniciando..." : "Jogar novamente"}
+          </button>
+        </>
+      )}
+
+      {gameState && gameState.status !== "finished" && (
+        <div class="actions-row">
+          {gameState.status === "question"
+            ? (
+              <p class="question-hint">
+                As respostas serão reveladas automaticamente quando o tempo
+                acabar.
+              </p>
+            )
+            : (
               <button
-                class="button button-danger"
-                disabled={loading.value}
-                onClick={finishQuiz}
+                class="button button-primary flex-1"
+                disabled={loading.value ||
+                  (gameState.status === "lobby" &&
+                    gameState.players.length === 0)}
+                onClick={() =>
+                  void action(
+                    gameState.status === "lobby" ? "start" : "next",
+                  )}
                 type="button"
               >
-                Encerrar quiz
+                {loading.value ? "Atualizando..." : actionLabel}
               </button>
             )}
-          </div>
-        )}
-      </section>
+          {gameState.status !== "lobby" && (
+            <button
+              class="button button-danger"
+              disabled={loading.value}
+              onClick={finishQuiz}
+              type="button"
+            >
+              Encerrar quiz
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -201,7 +252,7 @@ function statusLabel(status: GameState["status"]): string {
 
 function LoadingState() {
   return (
-    <div class="empty-state min-h-[22rem]">
+    <div class="empty-state">
       <span class="loader" />
       <p>Carregando sala...</p>
     </div>
