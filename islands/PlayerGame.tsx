@@ -1,10 +1,7 @@
 import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
-import { IslandMarker } from "../components/IslandMarker.tsx";
 import { shuffleChoices } from "../shared/shuffle.ts";
 import { useGameState } from "./useGameState.ts";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
-import { pushTrace } from "./useRenderTrace.ts";
 
 interface PlayerGameProps {
   code: string;
@@ -15,15 +12,12 @@ interface PlayerGameProps {
 export default function PlayerGame(
   { code, nickname, orderSeed }: PlayerGameProps,
 ) {
-  const renderCount = useIslandRenderCount();
-  const { state, error, connection, lastEventAt } = useGameState(code);
+  const { state, error } = useGameState(code);
   const selected = useSignal("");
   const submitted = useSignal(false);
   const feedback = useSignal("");
   const lastQuestion = useSignal("");
   const timeExpired = useSignal(false);
-  const roundTrip = useSignal<number | null>(null);
-  const serverTime = useSignal<number | null>(null);
 
   useEffect(() => {
     const questionId = state.value?.currentQuestion?.id ?? "";
@@ -33,10 +27,6 @@ export default function PlayerGame(
       submitted.value = false;
       feedback.value = "";
       timeExpired.value = false;
-      pushTrace(
-        "efeito",
-        "nova pergunta detectada → reset agrupado (selected/submitted/feedback/timeExpired) → +1 render",
-      );
     }
   }, [state.value?.currentQuestion?.id]);
 
@@ -45,9 +35,7 @@ export default function PlayerGame(
       submitted.value || timeExpired.value || state.value?.status !== "question"
     ) return;
     selected.value = choiceId;
-    pushTrace("clique", "alternativa escolhida → selected → +1 render");
     try {
-      const requestStartedAt = performance.now();
       const response = await fetch(`/api/games/${code}/answer`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -57,25 +45,13 @@ export default function PlayerGame(
       if (!response.ok) {
         throw new Error(result.error ?? "Não foi possível enviar a resposta.");
       }
-      roundTrip.value = Math.round(performance.now() - requestStartedAt);
-      serverTime.value = parseServerTiming(
-        response.headers.get("server-timing"),
-      );
       submitted.value = true;
       feedback.value = "Resposta enviada";
-      pushTrace(
-        "clique",
-        "resposta enviada → submitted/feedback/roundTrip/serverTime agrupados → +1 render",
-      );
     } catch (cause) {
       feedback.value = cause instanceof Error
         ? cause.message
         : "Não foi possível enviar a resposta.";
       selected.value = "";
-      pushTrace(
-        "clique",
-        "erro no envio → feedback/selected agrupados → +1 render",
-      );
     }
   }
 
@@ -95,7 +71,6 @@ export default function PlayerGame(
 
   return (
     <section class="island-surface island-surface-player player-game-island">
-      <IslandMarker count={renderCount} name="PlayerGame" tone="player" />
       <section class="game-header">
         <div>
           <p class="eyebrow">Você está jogando em</p>
@@ -188,112 +163,8 @@ export default function PlayerGame(
           </div>
         </section>
       )}
-      <RuntimeCard
-        connection={connection.value}
-        lastEventAt={lastEventAt.value}
-        roundTrip={roundTrip.value}
-        serverTime={serverTime.value}
-      />
     </section>
   );
-}
-
-interface RuntimeCardProps {
-  connection: "connecting" | "online" | "offline";
-  lastEventAt: number | null;
-  roundTrip: number | null;
-  serverTime: number | null;
-}
-
-function RuntimeCard(props: RuntimeCardProps) {
-  const fps = useSignal<number | null>(null);
-  const eventAge = props.lastEventAt
-    ? Math.max(0, Math.round((Date.now() - props.lastEventAt) / 1000))
-    : null;
-
-  useEffect(() => {
-    let frameCount = 0;
-    let startedAt = performance.now();
-    let frameId = 0;
-
-    const measureFrames = (timestamp: number) => {
-      frameCount += 1;
-      if (timestamp - startedAt >= 1000) {
-        fps.value = frameCount;
-        frameCount = 0;
-        startedAt = timestamp;
-      }
-      frameId = requestAnimationFrame(measureFrames);
-    };
-
-    frameId = requestAnimationFrame(measureFrames);
-    return () => cancelAnimationFrame(frameId);
-  }, []);
-
-  return (
-    <details class="runtime-card">
-      <summary>
-        <span class="runtime-status-dot" />
-        <span class="min-w-0 flex-1">
-          <strong>Telemetria do cliente</strong>
-          <small>como esta island está trabalhando</small>
-        </span>
-        <span class="runtime-chevron">+</span>
-      </summary>
-      <div class="runtime-grid">
-        <RuntimeMetric label="Hydration" value="Ativa no cliente" />
-        <RuntimeMetric label="SSE" value={connectionLabel(props.connection)} />
-        <RuntimeMetric
-          label="FPS"
-          value={formatMetric(fps.value, " FPS", "Medindo...")}
-        />
-        <RuntimeMetric
-          label="Rede"
-          value={formatMetric(props.roundTrip, " ms", "Após resposta")}
-        />
-        <RuntimeMetric
-          label="Servidor"
-          value={formatMetric(props.serverTime, " ms", "Após resposta")}
-        />
-        <RuntimeMetric
-          label="Último evento"
-          value={eventAge === null ? "Aguardando evento" : `${eventAge}s atrás`}
-        />
-      </div>
-    </details>
-  );
-}
-
-function RuntimeMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div class="runtime-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function connectionLabel(connection: RuntimeCardProps["connection"]): string {
-  return {
-    connecting: "Estabelecendo",
-    online: "Conectado",
-    offline: "Reconectando",
-  }[
-    connection
-  ];
-}
-
-function formatMetric(
-  value: number | null,
-  suffix = "",
-  pending = "Aguardando",
-): string {
-  return value === null ? pending : `${value}${suffix}`;
-}
-
-function parseServerTiming(header: string | null): number | null {
-  const duration = header?.match(/dur=([\d.]+)/)?.[1];
-  return duration ? Number(duration) : null;
 }
 
 interface CountdownProps {

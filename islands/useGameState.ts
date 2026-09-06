@@ -1,7 +1,6 @@
 import { useEffect } from "preact/hooks";
 import { type Signal, signal } from "@preact/signals";
 import type { GameState } from "../shared/types.ts";
-import { pushTrace } from "./useRenderTrace.ts";
 
 type ConnectionStatus = "connecting" | "online" | "offline";
 
@@ -31,11 +30,6 @@ function connect(store: GameStateStore, code: string) {
         throw new Error("Não foi possível carregar a partida.");
       }
       applyState(await response.json() as GameState);
-      pushTrace(
-        "http",
-        `GET /state → estado atualizado (status="${store.state.value?.status}")`,
-        store.refs,
-      );
     } catch (cause) {
       store.error.value = cause instanceof Error
         ? cause.message
@@ -53,11 +47,6 @@ function connect(store: GameStateStore, code: string) {
       (event as MessageEvent<string>).data,
     ) as GameState;
     applyState(nextState);
-    pushTrace(
-      "sse",
-      `state recebido (status="${nextState.status}") → +1 render por island`,
-      store.refs,
-    );
   });
   source.onerror = () => {
     store.connection.value = "offline";

@@ -1,6 +1,4 @@
 import { useSignal } from "@preact/signals";
-import { IslandMarker } from "../components/IslandMarker.tsx";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
 
 interface JoinGameProps {
   initialCode?: string;
@@ -12,7 +10,6 @@ interface JoinResponse {
 }
 
 export default function JoinGame({ initialCode = "" }: JoinGameProps) {
-  const renderCount = useIslandRenderCount();
   const code = useSignal(initialCode.toUpperCase());
   const nickname = useSignal("");
   const error = useSignal("");
@@ -51,7 +48,6 @@ export default function JoinGame({ initialCode = "" }: JoinGameProps) {
       class="panel island-surface island-surface-join space-y-5"
       onSubmit={join}
     >
-      <IslandMarker count={renderCount} name="JoinGame" tone="join" />
       <div>
         <p class="eyebrow">Entrar em uma partida</p>
         <h2 class="mt-2 text-2xl font-black text-slate-950">

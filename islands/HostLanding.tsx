@@ -1,9 +1,6 @@
 import { useSignal } from "@preact/signals";
-import { IslandMarker } from "../components/IslandMarker.tsx";
-import { useIslandRenderCount } from "./useIslandRenderCount.ts";
 
 export default function HostLanding() {
-  const renderCount = useIslandRenderCount();
   const loading = useSignal(false);
   const error = useSignal("");
 
@@ -27,15 +24,13 @@ export default function HostLanding() {
 
   return (
     <div class="panel island-surface island-surface-host space-y-6">
-      <IslandMarker count={renderCount} name="HostLanding" tone="host" />
       <div>
         <p class="eyebrow">Modo host</p>
         <h1 class="mt-2 text-3xl font-black text-slate-950">
           Crie uma sala e compartilhe o código.
         </h1>
         <p class="mt-3 text-sm leading-6 text-slate-600">
-          O quiz de fundamentos da web já está carregado com perguntas de HTML,
-          CSS e programação web.
+          Estamos carregando o quiz de fundamentos da web...
         </p>
       </div>
       {error.value && <p class="error-message">{error.value}</p>}
