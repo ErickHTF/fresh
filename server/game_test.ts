@@ -102,6 +102,7 @@ if (databaseUp) {
     "host must provide a nickname to create a game",
     dbTestOptions,
     async () => {
+      await ensureSchemaAndSeed();
       await assertRejects(
         () => createGame(""),
         Error,
