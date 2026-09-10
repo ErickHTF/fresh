@@ -5,22 +5,8 @@ Instância Amazon Linux (`ec2-user`). App em `/opt/fresh/app`, servido pelo
 
 ## 1. Security Group
 
-Regras de **entrada**:
-
-| Tipo              | Porta | Origem                  | Observação                     |
-| ----------------- | ----- | ----------------------- | ------------------------------ |
-| TCP personalizado | 8000  | `0.0.0.0/0`             | app (acesso direto)            |
-| SSH               | 22    | `0.0.0.0/0` (ou seu IP) | acesso do deploy/administração |
-| HTTP              | 80    | `0.0.0.0/0`             | opcional, com Nginx/Caddy      |
-| HTTPS             | 443   | `0.0.0.0/0`             | opcional, com Nginx/Caddy      |
-
-A **8000** expõe o app direto (`http://<IP>:8000`). Com proxy reverso, troque-a
-por 80/443 e mantenha a 8000 acessível apenas localmente.
-
-Regra de **saída**: `Todos` para `0.0.0.0/0`.
-
-Remova qualquer regra que exponha a **5432** (Postgres) para `0.0.0.0/0`; o
-banco só precisa ser acessível de dentro da instância.
+Foi preciso adicionar regras de entrada liberando o acesso à instância (e
+remover a exposição pública do Postgres).
 
 ## 2. Conexão SSH
 
