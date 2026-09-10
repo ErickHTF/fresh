@@ -87,7 +87,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
-          docker compose up -d postgres
+          docker compose up -d --wait postgres
           for file in db/migrations/*.sql; do
             docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U fresh -d fresh_quiz < "$file"
           done
