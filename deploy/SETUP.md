@@ -80,7 +80,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=fresh
+User=ec2-user
 WorkingDirectory=/opt/fresh/app
 EnvironmentFile=/opt/fresh/app/.env
 ExecStart=/usr/local/bin/deno serve -A --host 0.0.0.0 --port 8000 _fresh/server.js
@@ -93,6 +93,7 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
+sudo systemctl enable fresh
 ```
 
 O `.env` (com `DATABASE_URL`) é escrito pelo workflow a cada deploy; não crie
