@@ -1,0 +1,95 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13.22
+        env:
+          POSTGRES_DB: fresh_quiz
+          POSTGRES_USER: fresh
+          POSTGRES_PASSWORD: fresh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fresh -d fresh_quiz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://fresh:fresh@localhost:5432/fresh_quiz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno install --frozen
+      - run: deno task db:migrate
+      - run: deno task check
+      - run: deno task test
+      - run: deno task build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fresh-build
+          path: _fresh
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: fresh-build
+          path: _fresh
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Write production env file
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env.production
+
+      - name: Ship release
+        env:
+          SSH_USER: ${{ secrets.EC2_USER }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          APP_DIR: ${{ vars.APP_DIR || '/opt/fresh/app' }}
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" _fresh/ "$SSH_USER@$SSH_HOST:$APP_DIR/_fresh/"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" db/ "$SSH_USER@$SSH_HOST:$APP_DIR/db/"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" docker-compose.yml "$SSH_USER@$SSH_HOST:$APP_DIR/docker-compose.yml"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" .env.production "$SSH_USER@$SSH_HOST:$APP_DIR/.env"
+
+      - name: Apply migrations and restart service
+        env:
+          SSH_USER: ${{ secrets.EC2_USER }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          APP_DIR: ${{ vars.APP_DIR || '/opt/fresh/app' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$APP_DIR"
+          docker compose up -d postgres
+          for file in db/migrations/*.sql; do
+            docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U fresh -d fresh_quiz < "$file"
+          done
+          sudo systemctl restart fresh
+          REMOTE

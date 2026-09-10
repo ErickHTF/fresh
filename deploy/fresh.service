@@ -1,0 +1,17 @@
+[Unit]
+Description=Fresh Quiz
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fresh
+WorkingDirectory=/opt/fresh/app
+EnvironmentFile=/opt/fresh/app/.env
+ExecStart=/usr/local/bin/deno serve -A --host 0.0.0.0 --port 8000 _fresh/server.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
