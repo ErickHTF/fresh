@@ -7,13 +7,15 @@ Instância Amazon Linux (`ec2-user`). App em `/opt/fresh/app`, servido pelo
 
 Regras de **entrada**:
 
-| Tipo  | Porta | Origem                  | Observação                     |
-| ----- | ----- | ----------------------- | ------------------------------ |
-| SSH   | 22    | `0.0.0.0/0` (ou seu IP) | acesso do deploy/administração |
-| HTTP  | 80    | `0.0.0.0/0`             | site (via Nginx/Caddy)         |
-| HTTPS | 443   | `0.0.0.0/0`             | site (via Nginx/Caddy)         |
+| Tipo              | Porta | Origem                  | Observação                     |
+| ----------------- | ----- | ----------------------- | ------------------------------ |
+| TCP personalizado | 8000  | `0.0.0.0/0`             | app (acesso direto)            |
+| SSH               | 22    | `0.0.0.0/0` (ou seu IP) | acesso do deploy/administração |
+| HTTP              | 80    | `0.0.0.0/0`             | opcional, com Nginx/Caddy      |
+| HTTPS             | 443   | `0.0.0.0/0`             | opcional, com Nginx/Caddy      |
 
-Enquanto não houver proxy reverso, libere a **8000** em vez de 80/443.
+A **8000** expõe o app direto (`http://<IP>:8000`). Com proxy reverso, troque-a
+por 80/443 e mantenha a 8000 acessível apenas localmente.
 
 Regra de **saída**: `Todos` para `0.0.0.0/0`.
 
@@ -116,3 +118,14 @@ Variable opcional: `APP_DIR` (padrão `/opt/fresh/app`).
 
 _Actions → Deploy → Run workflow_. O job builda, envia `_fresh/`, `db/` e
 `docker-compose.yml`, aplica as migrações idempotentes e reinicia o serviço.
+
+## 9. Verificação
+
+```bash
+systemctl status fresh --no-pager
+curl -I http://localhost:8000
+journalctl -u fresh -n 50 --no-pager
+```
+
+`active (running)` e `HTTP/1.1 200` indicam que o app está no ar; em produção,
+acesse `http://<IP>:8000`.

@@ -45,6 +45,13 @@ uma sala.
 O quiz inicial contém perguntas de HTML, CSS, HTTP, JavaScript, seletores CSS e
 APIs.
 
+## Deploy
+
+Produção roda em uma EC2 (Amazon Linux) com o app sob `systemd` e o Postgres via
+Docker Compose na mesma instância. O deploy é manual: _Actions → Deploy → Run
+workflow_ builda o projeto, envia a build e reinicia o serviço. O guia de
+provisionamento está em [`deploy/SETUP.md`](deploy/SETUP.md).
+
 ## Ciclo da partida
 
 - Host cria a sala em `/host` com um apelido e compartilha o código.
