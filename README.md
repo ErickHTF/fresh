@@ -16,9 +16,9 @@ docker compose up -d
 deno task dev
 ```
 
-Ao criar o container do Postgres, o `docker-entrypoint-initdb.d` aplica
-automaticamente as migrações de `db/migrations/` e o seed
-(`db/seed/001_web_basics.sql`). Para recriar o banco do zero:
+Ao criar o container do Postgres, `db/init/01-setup.sh` aplica automaticamente
+as migrações de `db/migrations/` e o seed (`db/seed/001_web_basics.sql`). Para
+recriar o banco do zero (isso apaga os dados):
 
 ```bash
 docker compose down -v && docker compose up -d
@@ -47,10 +47,21 @@ APIs.
 
 ## Deploy
 
-Produção roda em uma EC2 (Amazon Linux) com o app sob `systemd` e o Postgres via
-Docker Compose na mesma instância. O deploy é manual: _Actions → Deploy → Run
-workflow_ builda o projeto, envia a build e reinicia o serviço. O guia de
-provisionamento está em [`deploy/SETUP.md`](deploy/SETUP.md).
+Produção e desenvolvimento rodam na mesma EC2 (Amazon Linux), cada um com seu
+`systemd` e porta: prod em `:8000`, dev em `:8001`. Os dois compartilham o mesmo
+banco `fresh_quiz`, no Postgres via Docker Compose na instância.
+
+São dois workflows independentes, ambos manuais:
+
+- **App** (_Actions → App → Run workflow_): escolhe `dev` ou `prod`, builda,
+  envia só o código, reinicia o serviço e valida `/health`; se falhar, restaura
+  a release anterior. Nunca toca no banco. Reiniciar derruba as partidas em
+  andamento (estado efêmero).
+- **Database** (_Actions → Database → Run workflow_): digita `RESET` e o
+  container do Postgres é derrubado e recriado (`down -v` + `up`), com as
+  migrações e o seed aplicados no init. Apaga todos os dados (banco único).
+
+O guia de provisionamento está em [`deploy/SETUP.md`](deploy/SETUP.md).
 
 ## Ciclo da partida
 
@@ -79,3 +90,4 @@ provisionamento está em [`deploy/SETUP.md`](deploy/SETUP.md).
 | POST   | `/api/games/:code/finish`  | Encerra o quiz antecipadamente (host).     |
 | POST   | `/api/games/:code/restart` | Volta ao lobby zerando placar (host).      |
 | POST   | `/api/games/:code/leave`   | Limpa os cookies da sessão.                |
+| GET    | `/health`                  | Health check (app + banco).                |
