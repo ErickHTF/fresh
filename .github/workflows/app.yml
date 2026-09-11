@@ -1,10 +1,19 @@
-name: Deploy
+name: App
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Ambiente de destino
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
 
 concurrency:
-  group: deploy-production
+  group: app-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
@@ -45,6 +54,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      APP_DIR: ${{ inputs.environment == 'prod' && (vars.APP_DIR_PROD || '/opt/fresh/app') || (vars.APP_DIR_DEV || '/opt/fresh/app-dev') }}
+      SERVICE: ${{ inputs.environment == 'prod' && 'fresh' || 'fresh-dev' }}
+      PORT: ${{ inputs.environment == 'prod' && '8000' || '8001' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
@@ -62,34 +76,50 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Write production env file
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Write env file
         run: printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env.production
 
       - name: Ship release
         env:
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_HOST: ${{ secrets.EC2_HOST }}
-          APP_DIR: ${{ vars.APP_DIR || '/opt/fresh/app' }}
         run: |
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" _fresh/ "$SSH_USER@$SSH_HOST:$APP_DIR/_fresh/"
-          rsync -az -e "ssh -i ~/.ssh/deploy_key" db/ "$SSH_USER@$SSH_HOST:$APP_DIR/db/"
-          rsync -az -e "ssh -i ~/.ssh/deploy_key" docker-compose.yml "$SSH_USER@$SSH_HOST:$APP_DIR/docker-compose.yml"
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" _fresh/ "$SSH_USER@$SSH_HOST:$APP_DIR/_fresh.next/"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" deploy/ "$SSH_USER@$SSH_HOST:$APP_DIR/deploy/"
           rsync -az -e "ssh -i ~/.ssh/deploy_key" .env.production "$SSH_USER@$SSH_HOST:$APP_DIR/.env"
 
-      - name: Apply migrations and restart service
+      - name: Restart and verify
         env:
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_HOST: ${{ secrets.EC2_HOST }}
-          APP_DIR: ${{ vars.APP_DIR || '/opt/fresh/app' }}
         run: |
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' SERVICE='$SERVICE' PORT='$PORT' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
-          docker compose up -d --wait postgres
-          for file in db/migrations/*.sql; do
-            docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U fresh -d fresh_quiz < "$file"
+
+          rm -rf _fresh.previous
+          if [ -d _fresh ]; then mv _fresh _fresh.previous; fi
+          mv _fresh.next _fresh
+
+          sudo systemctl restart "$SERVICE"
+
+          healthy=0
+          for _ in $(seq 1 15); do
+            if curl -fsS -o /dev/null "http://localhost:$PORT/health"; then
+              healthy=1
+              break
+            fi
+            sleep 2
           done
-          sudo systemctl restart fresh
+
+          if [ "$healthy" -ne 1 ]; then
+            echo "Health check failed on port $PORT; rolling back" >&2
+            rm -rf _fresh.failed
+            mv _fresh _fresh.failed
+            if [ -d _fresh.previous ]; then mv _fresh.previous _fresh; fi
+            sudo systemctl restart "$SERVICE"
+            exit 1
+          fi
+
+          echo "App healthy: $SERVICE on port $PORT"
           REMOTE
