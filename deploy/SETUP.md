@@ -111,7 +111,7 @@ workflow:
    `docker compose up -d`, recriando o Postgres do zero.
 3. No init do container, `db/init/01-setup.sh` aplica todas as migrações de
    `db/migrations/` e o seed de `db/seed/`.
-4. Reinicia os serviços e valida `/health`.
+4. Reinicia os serviços (sem validar `/health`, que depende da versão da app).
 
 Isso **apaga todos os dados** e afeta os dois ambientes, pois o banco é único.
 Use para provisionar do zero ou recomeçar uma demonstração.

@@ -62,23 +62,8 @@ jobs:
           for svc in fresh fresh-dev; do
             if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
               sudo systemctl restart "$svc" || true
-            fi
-          done
-
-          for pair in "fresh 8000" "fresh-dev 8001"; do
-            svc=${pair% *}
-            port=${pair#* }
-            if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
-              healthy=0
-              for _ in $(seq 1 15); do
-                if curl -fsS -o /dev/null "http://localhost:$port/health"; then
-                  healthy=1
-                  break
-                fi
-                sleep 2
-              done
-              if [ "$healthy" -ne 1 ]; then
-                echo "Health check failed for $svc on port $port" >&2
+              if ! systemctl is-active --quiet "$svc"; then
+                echo "Service $svc is not active after restart" >&2
                 exit 1
               fi
             fi
