@@ -10,8 +10,9 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/migrations:/docker-entrypoint-initdb.d/01-migrations:ro
-      - ./db/seed/001_web_basics.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./db/init/01-setup.sh:/docker-entrypoint-initdb.d/01-setup.sh:ro
+      - ./db/migrations:/migrations:ro
+      - ./db/seed:/seed:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fresh -d fresh_quiz"]
       interval: 5s
