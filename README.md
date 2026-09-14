@@ -45,6 +45,25 @@ uma sala.
 O quiz inicial contém perguntas de HTML, CSS, HTTP, JavaScript, seletores CSS e
 APIs.
 
+## Estrutura
+
+- `routes/`: rotas e handlers HTTP (roteamento por arquivo do Fresh); a API fica
+  em `routes/api/`.
+- `islands/`: componentes interativos hidratados no cliente (SSE, votação,
+  ranking).
+- `components/`: componentes apenas de SSR, sem JavaScript no cliente.
+- `server/`: lógica exclusiva do servidor; `server/game/` separa o domínio da
+  partida em repositório, reveal por timer e serviços.
+- `shared/`: tipos e funções isomórficas usadas pelo servidor e pelos islands.
+- `db/`: migrações, seed e init do Postgres; `db/scripts/` contém os comandos
+  `db:migrate` e `db:seed`.
+- `assets/`: CSS processado pelo Vite (importado em `client.ts`).
+- `static/`: arquivos servidos sem processamento (favicon, logo).
+- `deploy/`: unit do systemd, scripts de deploy/reset e guia de provisionamento.
+- `.github/`: workflows de CI e de deploy manual.
+
+A pasta `_fresh/` é o resultado do build (gerada, fora do controle de versão).
+
 ## Deploy
 
 A produção roda em uma EC2 (Amazon Linux), com `systemd` na porta `:8000`. O
