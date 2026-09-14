@@ -2,6 +2,11 @@
 set -euo pipefail
 cd "$APP_DIR"
 
+if [ ! -d _fresh.next ]; then
+  echo "_fresh.next ausente; abortando sem alterar a release" >&2
+  exit 1
+fi
+
 rm -rf _fresh.failed
 rm -rf _fresh.previous
 if [ -d _fresh ]; then mv _fresh _fresh.previous; fi
@@ -20,10 +25,12 @@ done
 
 if [ "$healthy" -ne 1 ]; then
   echo "Health check failed on port $PORT; rolling back" >&2
-  rm -rf _fresh.failed
-  mv _fresh _fresh.failed
-  if [ -d _fresh.previous ]; then mv _fresh.previous _fresh; fi
-  sudo systemctl restart "$SERVICE"
+  if [ -d _fresh.previous ]; then
+    rm -rf _fresh.failed
+    mv _fresh _fresh.failed
+    mv _fresh.previous _fresh
+    sudo systemctl restart "$SERVICE"
+  fi
   exit 1
 fi
 

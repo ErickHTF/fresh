@@ -82,7 +82,7 @@ jobs:
           SSH_HOST: ${{ secrets.EC2_HOST }}
         run: |
           rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" _fresh/ "$SSH_USER@$SSH_HOST:$APP_DIR/_fresh.next/"
-          rsync -az -e "ssh -i ~/.ssh/deploy_key" deploy/ "$SSH_USER@$SSH_HOST:$APP_DIR/deploy/"
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" deploy/ "$SSH_USER@$SSH_HOST:$APP_DIR/deploy/"
           rsync -az --chmod=F600 -e "ssh -i ~/.ssh/deploy_key" .env.production "$SSH_USER@$SSH_HOST:$APP_DIR/.env"
 
       - name: Restart and verify
