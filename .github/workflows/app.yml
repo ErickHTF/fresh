@@ -9,44 +9,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:13.22
-        env:
-          POSTGRES_DB: fresh_quiz
-          POSTGRES_USER: fresh
-          POSTGRES_PASSWORD: fresh
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U fresh -d fresh_quiz"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://fresh:fresh@localhost:5432/fresh_quiz
-    steps:
-      - uses: actions/checkout@v5
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/deno
-          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
-          restore-keys: deno-${{ runner.os }}-
-      - run: deno install --frozen
-      - run: deno task db:migrate
-      - run: deno task check
-      - run: deno task test
-      - run: deno task build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: fresh-build
-          path: _fresh
-          retention-days: 1
+    uses: ./.github/workflows/build.yml
 
   deploy:
     needs: build

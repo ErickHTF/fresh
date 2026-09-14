@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  lint-workflows:
+  lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -22,3 +22,6 @@ jobs:
         run: docker run --rm -v "$PWD:$PWD" -w "$PWD" rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
       - name: Lint scripts
         run: shellcheck deploy/scripts/*.sh .github/actions/*/*.sh
+
+  build:
+    uses: ./.github/workflows/build.yml
