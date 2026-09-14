@@ -10,7 +10,7 @@ import {
   revealCurrentQuestion,
   startGame,
   submitAnswer,
-} from "./game.ts";
+} from "./game/index.ts";
 
 async function isDatabaseAvailable(): Promise<boolean> {
   try {

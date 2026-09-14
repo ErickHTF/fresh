@@ -1,9 +1,9 @@
 import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { Countdown } from "../components/Countdown.tsx";
-import { LoadingState } from "../components/LoadingState.tsx";
-import type { GameState } from "../shared/types.ts";
-import { totalVotes, voteShare } from "../shared/votes.ts";
+import { Countdown } from "@/components/Countdown.tsx";
+import { LoadingState } from "@/components/LoadingState.tsx";
+import type { GameState } from "@/shared/types.ts";
+import { totalVotes, voteShare } from "@/shared/votes.ts";
 import { useGameState } from "./useGameState.ts";
 
 interface HostGameProps {

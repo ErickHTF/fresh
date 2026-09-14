@@ -1,10 +1,10 @@
 import { Head } from "fresh/runtime";
-import { DevToolsGuide } from "../../components/DevToolsGuide.tsx";
-import { StaticNotice } from "../../components/StaticNotice.tsx";
-import PlayerGame from "../../islands/PlayerGame.tsx";
-import Ranking from "../../islands/Ranking.tsx";
-import { getCookie, playerIdCookieName } from "../../server/cookies.ts";
-import { define } from "../../utils.ts";
+import { DevToolsGuide } from "@/components/DevToolsGuide.tsx";
+import { StaticNotice } from "@/components/StaticNotice.tsx";
+import PlayerGame from "@/islands/PlayerGame.tsx";
+import Ranking from "@/islands/Ranking.tsx";
+import { getCookie, playerIdCookieName } from "@/server/cookies.ts";
+import { define } from "@/utils.ts";
 
 export default define.page(function PlayerGamePage(ctx) {
   const code = ctx.params.code.toUpperCase();

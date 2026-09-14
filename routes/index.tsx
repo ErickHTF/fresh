@@ -1,7 +1,7 @@
 import { Head } from "fresh/runtime";
-import { Brand } from "../components/Brand.tsx";
-import JoinGame from "../islands/JoinGame.tsx";
-import { define } from "../utils.ts";
+import { Brand } from "@/components/Brand.tsx";
+import JoinGame from "@/islands/JoinGame.tsx";
+import { define } from "@/utils.ts";
 
 export default define.page(function Home() {
   return (

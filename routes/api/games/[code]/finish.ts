@@ -1,8 +1,8 @@
-import { authorize } from "../../../../server/auth.ts";
-import { notify } from "../../../../server/events.ts";
-import { finishGame } from "../../../../server/game.ts";
-import { errorResponse, json } from "../../../../server/http.ts";
-import { define } from "../../../../utils.ts";
+import { authorize } from "@/server/auth.ts";
+import { notify } from "@/server/events.ts";
+import { finishGame } from "@/server/game/index.ts";
+import { errorResponse, json } from "@/server/http.ts";
+import { define } from "@/utils.ts";
 
 export const handler = define.handlers({
   async POST(ctx) {

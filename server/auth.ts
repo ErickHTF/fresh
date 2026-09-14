@@ -1,5 +1,5 @@
 import { getCookie, hostCookieName, playerCookieName } from "./cookies.ts";
-import { verifyHost, verifyPlayer } from "./game.ts";
+import { verifyHost, verifyPlayer } from "./game/index.ts";
 
 export async function authorize(
   request: Request,

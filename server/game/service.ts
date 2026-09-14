@@ -1,139 +1,26 @@
-import { calculatePoints, isDeadlineExpired } from "../shared/game-state.ts";
-import type { GameSession, GameState, PlayerSession } from "../shared/types.ts";
-import { sql } from "./db.ts";
-import { notify } from "./events.ts";
+import { calculatePoints, isDeadlineExpired } from "../../shared/game-state.ts";
+import type {
+  GameSession,
+  GameState,
+  PlayerSession,
+} from "../../shared/types.ts";
+import { sql } from "../db.ts";
+import {
+  createCode,
+  createToken,
+  type GameRow,
+  getAnswerCounts,
+  getGame,
+  getPlayerIdByToken,
+  getQuestion,
+  getQuestionChoices,
+  hasAnsweredQuestion,
+} from "./repository.ts";
+import { cancelReveal, scheduleReveal } from "./reveal.ts";
 
-interface GameRow {
-  id: string;
-  quiz_id: string;
-  code: string;
-  host_token: string;
-  host_nickname: string | null;
-  status: GameState["status"];
-  current_question_position: number;
-  question_started_at: Date | null;
-  question_deadline_at: Date | null;
-}
-
-interface QuestionRow {
-  id: string;
-  position: number;
-  prompt: string;
-  duration_seconds: number;
-}
-
-interface ChoiceRow {
-  id: string;
-  position: number;
-  label: string;
-  is_correct: boolean;
-}
-
-function createToken(): string {
-  return crypto.randomUUID();
-}
-
-const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function createCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(bytes, (byte) => codeAlphabet[byte % codeAlphabet.length])
-    .join("");
-}
-
-const revealTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-function scheduleReveal(
-  gameId: string,
-  code: string,
-  deadlineAt: Date,
-): void {
-  const previous = revealTimers.get(gameId);
-  if (previous) clearTimeout(previous);
-  const delay = Math.max(0, deadlineAt.getTime() - Date.now());
-  const timer = setTimeout(async () => {
-    revealTimers.delete(gameId);
-    try {
-      await revealCurrentQuestion(code);
-      await notify(code);
-    } catch {
-      // A partida pode ter mudado entre o agendamento e a execução.
-    }
-  }, delay);
-  revealTimers.set(gameId, timer);
-}
-
-function cancelReveal(gameId: string): void {
-  const previous = revealTimers.get(gameId);
-  if (previous) clearTimeout(previous);
-  revealTimers.delete(gameId);
-}
-
-export async function cancelPendingReveal(code: string): Promise<void> {
-  const game = await getGame(code);
-  if (game) cancelReveal(game.id);
-}
-
-export async function revealCurrentQuestion(code: string): Promise<void> {
-  const game = await getGame(code);
-  if (!game || game.status !== "question") return;
-  cancelReveal(game.id);
-  await sql.begin(async (transaction) => {
-    const updated = await transaction`
-      UPDATE games
-      SET status = 'reveal'
-      WHERE id = ${game.id} AND status = 'question'
-      RETURNING id
-    `;
-    if (updated.count !== 1) return;
-    await transaction`
-      UPDATE game_players gp
-      SET score = gp.score + COALESCE((
-        SELECT SUM(a.points)
-        FROM answers a
-        WHERE a.game_id = ${game.id}
-          AND a.player_id = gp.player_id
-          AND a.question_id = (
-            SELECT id
-            FROM questions
-            WHERE quiz_id = ${game.quiz_id}
-              AND position = ${game.current_question_position}
-          )
-      ), 0)
-      WHERE gp.game_id = ${game.id}
-    `;
-  });
-}
-
-async function getGame(code: string): Promise<GameRow | null> {
-  const rows = await sql<GameRow[]>`
-    SELECT id, quiz_id, code, host_token, host_nickname, status,
-      current_question_position, question_started_at, question_deadline_at
-    FROM games
-    WHERE code = ${code}
-  `;
-  return rows[0] ?? null;
-}
-
-async function getQuestion(
-  quizId: string,
-  position: number,
-): Promise<QuestionRow | null> {
-  const rows = await sql<QuestionRow[]>`
-    SELECT id, position, prompt, duration_seconds
-    FROM questions
-    WHERE quiz_id = ${quizId} AND position = ${position}
-  `;
-  return rows[0] ?? null;
-}
-
-async function getQuestionChoices(questionId: string): Promise<ChoiceRow[]> {
-  return await sql<ChoiceRow[]>`
-    SELECT id, position, label, is_correct
-    FROM choices
-    WHERE question_id = ${questionId}
-    ORDER BY position
-  `;
+export interface StateViewer {
+  role?: "host" | "player";
+  playerToken?: string;
 }
 
 export async function createGame(nickname: string): Promise<GameSession> {
@@ -214,52 +101,6 @@ export async function verifyPlayer(
     WHERE g.code = ${code} AND p.player_token = ${playerToken}
   `;
   return Boolean(rows[0]);
-}
-
-async function getPlayerIdByToken(
-  gameId: string,
-  playerToken: string,
-): Promise<string | null> {
-  const rows = await sql<{ id: string }[]>`
-    SELECT p.id
-    FROM players p
-    JOIN game_players gp ON gp.player_id = p.id
-    WHERE gp.game_id = ${gameId} AND p.player_token = ${playerToken}
-  `;
-  return rows[0]?.id ?? null;
-}
-
-async function hasAnsweredQuestion(
-  gameId: string,
-  questionId: string,
-  playerId: string,
-): Promise<boolean> {
-  const rows = await sql<{ answered: boolean }[]>`
-    SELECT EXISTS (
-      SELECT 1 FROM answers
-      WHERE game_id = ${gameId} AND question_id = ${questionId}
-        AND player_id = ${playerId}
-    ) AS answered
-  `;
-  return rows[0]?.answered ?? false;
-}
-
-async function getAnswerCounts(
-  gameId: string,
-  questionId: string,
-): Promise<Record<string, number>> {
-  const rows = await sql<{ choice_id: string; count: number }[]>`
-    SELECT choice_id, count(*)::int AS count
-    FROM answers
-    WHERE game_id = ${gameId} AND question_id = ${questionId}
-    GROUP BY choice_id
-  `;
-  return Object.fromEntries(rows.map((row) => [row.choice_id, row.count]));
-}
-
-export interface StateViewer {
-  role?: "host" | "player";
-  playerToken?: string;
 }
 
 export async function getState(
@@ -410,7 +251,12 @@ export async function submitAnswer(
     WHERE gp.game_id = ${game.id} AND p.player_token = ${playerToken}
   `;
   if (!player) throw new Error("Jogador não encontrado.");
-  const [choice] = await sql<ChoiceRow[]>`
+  const [choice] = await sql<{
+    id: string;
+    position: number;
+    label: string;
+    is_correct: boolean;
+  }[]>`
     SELECT id, position, label, is_correct FROM choices
     WHERE id = ${choiceId} AND question_id = ${question.id}
   `;

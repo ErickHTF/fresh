@@ -1,8 +1,8 @@
-import { getCookie, playerCookieName } from "../../../../server/cookies.ts";
-import { notify } from "../../../../server/events.ts";
-import { submitAnswer, verifyPlayer } from "../../../../server/game.ts";
-import { body, errorResponse, json } from "../../../../server/http.ts";
-import { define } from "../../../../utils.ts";
+import { getCookie, playerCookieName } from "@/server/cookies.ts";
+import { notify } from "@/server/events.ts";
+import { submitAnswer, verifyPlayer } from "@/server/game/index.ts";
+import { body, errorResponse, json } from "@/server/http.ts";
+import { define } from "@/utils.ts";
 
 interface AnswerBody {
   choiceId?: string;

@@ -1,7 +1,7 @@
-import { hostCookieName, setSessionCookie } from "../../server/cookies.ts";
-import { createGame } from "../../server/game.ts";
-import { body, errorResponse, json } from "../../server/http.ts";
-import { define } from "../../utils.ts";
+import { hostCookieName, setSessionCookie } from "@/server/cookies.ts";
+import { createGame } from "@/server/game/index.ts";
+import { body, errorResponse, json } from "@/server/http.ts";
+import { define } from "@/utils.ts";
 
 interface CreateGameBody {
   nickname?: string;

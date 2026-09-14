@@ -1,6 +1,6 @@
 import { type Signal, signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import type { GameState } from "../shared/types.ts";
+import type { GameState } from "@/shared/types.ts";
 
 type ConnectionStatus = "connecting" | "online" | "offline";
 
