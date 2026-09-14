@@ -1,24 +1,21 @@
 # Deploy na EC2 — Setup
 
-Instância Amazon Linux (`ec2-user`). Dois ambientes na mesma instância,
-compartilhando o mesmo banco:
+Instância Amazon Linux (`ec2-user`), um único ambiente:
 
-| Ambiente | Diretório            | Porta | Serviço     |
-| -------- | -------------------- | ----- | ----------- |
-| prod     | `/opt/fresh/app`     | 8000  | `fresh`     |
-| dev      | `/opt/fresh/app-dev` | 8001  | `fresh-dev` |
+| Diretório        | Porta | Serviço |
+| ---------------- | ----- | ------- |
+| `/opt/fresh/app` | 8000  | `fresh` |
 
-O Postgres roda em Docker Compose (container único, banco `fresh_quiz`) e é
-compartilhado pelos dois ambientes. A operação é feita por dois workflows
-independentes:
+O Postgres roda em Docker Compose (container único, banco `fresh_quiz`). A
+operação é feita por dois workflows independentes:
 
-- **App**: publica o código em `dev` ou `prod`. Nunca toca no banco.
+- **App**: publica o código. Nunca toca no banco.
 - **Database**: destrói e recria o container do Postgres (schema + seed).
 
 ## 1. Security Group
 
-Libere entrada nas portas `8000` (prod) e `8001` (dev) e **não** exponha a porta
-do Postgres publicamente.
+Libere entrada na porta `8000` e **não** exponha a porta do Postgres
+publicamente.
 
 ## 2. Conexão SSH
 
@@ -58,34 +55,32 @@ Saia e reconecte o SSH para o grupo `docker` valer.
 
 ## 5. Diretórios do app e sudoers
 
-Os workflows reiniciam os serviços via `sudo systemctl restart`; libere só esses
-comandos sem senha.
+O workflow reinicia o serviço via `sudo systemctl restart`; libere só esse
+comando sem senha.
 
 ```bash
-sudo mkdir -p /opt/fresh/app /opt/fresh/app-dev
+sudo mkdir -p /opt/fresh/app
 sudo chown -R ec2-user:ec2-user /opt/fresh
 
-echo "ec2-user ALL=(ALL) NOPASSWD: /bin/systemctl restart fresh, /bin/systemctl restart fresh-dev" | sudo tee /etc/sudoers.d/fresh >/dev/null
+echo "ec2-user ALL=(ALL) NOPASSWD: /bin/systemctl restart fresh" | sudo tee /etc/sudoers.d/fresh >/dev/null
 sudo chmod 440 /etc/sudoers.d/fresh
 ```
 
-## 6. Units do systemd
+## 6. Unit do systemd
 
-Os arquivos estão versionados em `deploy/fresh.service` e
-`deploy/fresh-dev.service` e são enviados a cada deploy para `$APP_DIR/deploy/`.
-Na primeira vez, instale os dois:
+O arquivo está versionado em `deploy/fresh.service` e é enviado a cada deploy
+para `$APP_DIR/deploy/`. Na primeira vez, instale-o:
 
 ```bash
 sudo cp /opt/fresh/app/deploy/fresh.service /etc/systemd/system/fresh.service
-sudo cp /opt/fresh/app/deploy/fresh-dev.service /etc/systemd/system/fresh-dev.service
 sudo systemctl daemon-reload
-sudo systemctl enable fresh fresh-dev
+sudo systemctl enable fresh
 ```
 
-Sempre que os units mudarem no repositório, repita o `cp` + `daemon-reload`.
+Sempre que o unit mudar no repositório, repita o `cp` + `daemon-reload`.
 
-Cada serviço lê o `DATABASE_URL` do respectivo `.env`, escrito pelo App a cada
-publicação; não crie manualmente.
+O serviço lê o `DATABASE_URL` do `.env`, escrito pelo App a cada publicação; não
+crie manualmente.
 
 ## 7. Secrets do GitHub
 
@@ -98,8 +93,7 @@ Em _Settings → Secrets and variables → Actions_ (nível do repositório):
 | `EC2_SSH_KEY`  | conteúdo do `.pem`                                 |
 | `DATABASE_URL` | `postgres://fresh:fresh@localhost:5433/fresh_quiz` |
 
-Variables opcionais (nível do repositório): `APP_DIR_PROD` (padrão
-`/opt/fresh/app`) e `APP_DIR_DEV` (padrão `/opt/fresh/app-dev`).
+Não há variables obrigatórias; o diretório de deploy é fixo em `/opt/fresh/app`.
 
 O secret opcional `EC2_SSH_HOST_FINGERPRINT` ativa a verificação da chave do
 host SSH. Gere o valor com:
@@ -123,19 +117,18 @@ workflow:
    zero.
 3. No init do container, `db/init/01-setup.sh` aplica todas as migrações de
    `db/migrations/` e o seed de `db/seed/`.
-4. Reinicia apenas os serviços instalados (sem validar `/health`, que depende da
-   versão da app).
+4. Reinicia o serviço (sem validar `/health`, que depende da versão da app).
 
 Os passos 2 e 4 vêm de `deploy/scripts/reset-db.sh`, executado no servidor via
 `bash -s` — o arquivo não é copiado, é lido pelo runner.
 
-Isso **apaga todos os dados** e afeta os dois ambientes, pois o banco é único.
-Use para provisionar do zero ou recomeçar uma demonstração.
+Isso **apaga todos os dados**. Use para provisionar do zero ou recomeçar uma
+demonstração.
 
 ## 9. App
 
-_Actions → App → Run workflow_, escolhendo o branch e o ambiente (`dev` ou
-`prod`). Ambos são manuais — não há deploy automático por push. O workflow:
+_Actions → App → Run workflow_, escolhendo o branch. É manual — não há deploy
+automático por push. O workflow:
 
 1. Roda `deno check`, testes e build; valida as migrações contra um Postgres de
    CI.
@@ -154,13 +147,11 @@ efêmero), mas não altera o banco nem os dados do quiz.
 ## 10. Verificação
 
 ```bash
-systemctl status fresh fresh-dev --no-pager
+systemctl status fresh --no-pager
 curl -I http://localhost:8000/health
-curl -I http://localhost:8001/health
 docker compose -f /opt/fresh/app/docker-compose.yml ps
 journalctl -u fresh -n 50 --no-pager
-journalctl -u fresh-dev -n 50 --no-pager
 ```
 
-`active (running)` e `HTTP/1.1 200` indicam que os apps estão no ar; em
-produção, acesse `http://<IP>:8000` (prod) e `http://<IP>:8001` (dev).
+`active (running)` e `HTTP/1.1 200` indicam que o app está no ar; acesse
+`http://<IP>:8000`.
