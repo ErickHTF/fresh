@@ -101,6 +101,17 @@ Em _Settings → Secrets and variables → Actions_ (nível do repositório):
 Variables opcionais (nível do repositório): `APP_DIR_PROD` (padrão
 `/opt/fresh/app`) e `APP_DIR_DEV` (padrão `/opt/fresh/app-dev`).
 
+O secret opcional `EC2_SSH_HOST_FINGERPRINT` ativa a verificação da chave do
+host SSH. Gere o valor com:
+
+```bash
+ssh-keyscan -t ed25519 <IP_PUBLICO> 2>/dev/null | ssh-keygen -lf -
+```
+
+e cadastre o `SHA256:...` retornado. Sem ele, os workflows confiam no
+`ssh-keyscan` (TOFU), como antes. Se a instância for recriada, o fingerprint
+muda e o deploy passa a falhar até o secret ser atualizado.
+
 ## 8. Database
 
 _Actions → Database → Run workflow_, digitando `RESET` na confirmação. O
@@ -108,10 +119,15 @@ workflow:
 
 1. Envia o `docker-compose.yml` e `db/` para a instância.
 2. Roda `docker compose down -v` (remove container **e volume**) e
-   `docker compose up -d`, recriando o Postgres do zero.
+   `docker compose up -d --wait --wait-timeout 60`, recriando o Postgres do
+   zero.
 3. No init do container, `db/init/01-setup.sh` aplica todas as migrações de
    `db/migrations/` e o seed de `db/seed/`.
-4. Reinicia os serviços (sem validar `/health`, que depende da versão da app).
+4. Reinicia apenas os serviços instalados (sem validar `/health`, que depende
+   da versão da app).
+
+Os passos 2 e 4 vêm de `deploy/scripts/reset-db.sh`, executado no servidor via
+`bash -s` — o arquivo não é copiado, é lido pelo runner.
 
 Isso **apaga todos os dados** e afeta os dois ambientes, pois o banco é único.
 Use para provisionar do zero ou recomeçar uma demonstração.
@@ -123,9 +139,14 @@ _Actions → App → Run workflow_, escolhendo o branch e o ambiente (`dev` ou
 
 1. Roda `deno check`, testes e build; valida as migrações contra um Postgres de
    CI.
-2. Envia só o código (`_fresh/`) e o `.env`, reinicia o serviço e faz health
-   check em `/health`. Se falhar, restaura a release anterior e reinicia,
-   falhando o job.
+2. Envia só o código (`_fresh/`), o `deploy/` e o `.env` (com permissão `600`),
+   reinicia o serviço e faz health check em `/health`. Se falhar, restaura a
+   release anterior e reinicia, falhando o job.
+
+O restart, o health check e o rollback vêm de `deploy/scripts/deploy-app.sh`,
+executado no servidor via `bash -s`. Os scripts são validados por `shellcheck`
+e os workflows por `actionlint` no workflow **CI**, disparado em push para
+`main` e em pull requests.
 
 O App não executa SQL. Reiniciar derruba as partidas em andamento (estado
 efêmero), mas não altera o banco nem os dados do quiz.

@@ -15,6 +15,7 @@ concurrency:
 jobs:
   reset:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       APP_DIR: ${{ vars.APP_DIR_PROD || '/opt/fresh/app' }}
     steps:
@@ -30,14 +31,11 @@ jobs:
           fi
 
       - name: Configure SSH
-        env:
-          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          SSH_HOST: ${{ secrets.EC2_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        uses: ./.github/actions/configure-ssh
+        with:
+          ssh-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-host: ${{ secrets.EC2_HOST }}
+          ssh-fingerprint: ${{ secrets.EC2_SSH_HOST_FINGERPRINT }}
 
       - name: Ship database files
         env:
@@ -52,22 +50,4 @@ jobs:
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' bash -s" <<'REMOTE'
-          set -euo pipefail
-          cd "$APP_DIR"
-
-          docker compose down -v --remove-orphans
-          docker compose up -d --wait postgres
-
-          for svc in fresh fresh-dev; do
-            if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
-              sudo systemctl restart "$svc" || true
-              if ! systemctl is-active --quiet "$svc"; then
-                echo "Service $svc is not active after restart" >&2
-                exit 1
-              fi
-            fi
-          done
-
-          echo "Database recreated with migrations and seed"
-          REMOTE
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' bash -s" < deploy/scripts/reset-db.sh

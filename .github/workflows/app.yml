@@ -19,6 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:13.22
@@ -40,6 +41,11 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('deno.lock') }}
+          restore-keys: deno-${{ runner.os }}-
       - run: deno install --frozen
       - run: deno task db:migrate
       - run: deno task check
@@ -54,6 +60,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       APP_DIR: ${{ inputs.environment == 'prod' && (vars.APP_DIR_PROD || '/opt/fresh/app') || (vars.APP_DIR_DEV || '/opt/fresh/app-dev') }}
       SERVICE: ${{ inputs.environment == 'prod' && 'fresh' || 'fresh-dev' }}
@@ -67,17 +74,16 @@ jobs:
           path: _fresh
 
       - name: Configure SSH
-        env:
-          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          SSH_HOST: ${{ secrets.EC2_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        uses: ./.github/actions/configure-ssh
+        with:
+          ssh-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-host: ${{ secrets.EC2_HOST }}
+          ssh-fingerprint: ${{ secrets.EC2_SSH_HOST_FINGERPRINT }}
 
       - name: Write env file
-        run: printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env.production
+        run: |
+          [ -n "$DATABASE_URL" ] || { echo "DATABASE_URL ausente" >&2; exit 1; }
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env.production
 
       - name: Ship release
         env:
@@ -86,40 +92,11 @@ jobs:
         run: |
           rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" _fresh/ "$SSH_USER@$SSH_HOST:$APP_DIR/_fresh.next/"
           rsync -az -e "ssh -i ~/.ssh/deploy_key" deploy/ "$SSH_USER@$SSH_HOST:$APP_DIR/deploy/"
-          rsync -az -e "ssh -i ~/.ssh/deploy_key" .env.production "$SSH_USER@$SSH_HOST:$APP_DIR/.env"
+          rsync -az --chmod=F600 -e "ssh -i ~/.ssh/deploy_key" .env.production "$SSH_USER@$SSH_HOST:$APP_DIR/.env"
 
       - name: Restart and verify
         env:
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' SERVICE='$SERVICE' PORT='$PORT' bash -s" <<'REMOTE'
-          set -euo pipefail
-          cd "$APP_DIR"
-
-          rm -rf _fresh.previous
-          if [ -d _fresh ]; then mv _fresh _fresh.previous; fi
-          mv _fresh.next _fresh
-
-          sudo systemctl restart "$SERVICE"
-
-          healthy=0
-          for _ in $(seq 1 15); do
-            if curl -fsS -o /dev/null "http://localhost:$PORT/health"; then
-              healthy=1
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "$healthy" -ne 1 ]; then
-            echo "Health check failed on port $PORT; rolling back" >&2
-            rm -rf _fresh.failed
-            mv _fresh _fresh.failed
-            if [ -d _fresh.previous ]; then mv _fresh.previous _fresh; fi
-            sudo systemctl restart "$SERVICE"
-            exit 1
-          fi
-
-          echo "App healthy: $SERVICE on port $PORT"
-          REMOTE
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "APP_DIR='$APP_DIR' SERVICE='$SERVICE' PORT='$PORT' bash -s" < deploy/scripts/deploy-app.sh
