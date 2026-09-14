@@ -5,6 +5,7 @@ import { subscribe } from "../../../../server/events.ts";
 import { getState } from "../../../../server/game.ts";
 
 const encoder = new TextEncoder();
+const heartbeatIntervalMs = 25000;
 
 export const handler = define.handlers({
   async GET(ctx) {
@@ -21,22 +22,27 @@ export const handler = define.handlers({
     let heartbeat: number | undefined;
     const stream = new ReadableStream({
       start(controller) {
+        let lastMessageAt = Date.now();
+        const send = (payload: string) => {
+          controller.enqueue(encoder.encode(payload));
+          lastMessageAt = Date.now();
+        };
         const sendState = async () => {
           const currentState = await getState(code, { role, playerToken });
           if (currentState) {
-            controller.enqueue(
-              encoder.encode(
-                `event: state\ndata: ${JSON.stringify(currentState)}\n\n`,
-              ),
-            );
+            send(`event: state\ndata: ${JSON.stringify(currentState)}\n\n`);
           }
         };
         unsubscribe = subscribe(code, sendState);
         void sendState();
-        heartbeat = setInterval(
-          () => controller.enqueue(encoder.encode(": ping\n\n")),
-          15000,
-        );
+        heartbeat = setInterval(() => {
+          if (Date.now() - lastMessageAt < heartbeatIntervalMs) return;
+          try {
+            send(": ping\n\n");
+          } catch {
+            // O stream já foi encerrado; o cancel abaixo limpa o intervalo.
+          }
+        }, heartbeatIntervalMs);
       },
       cancel() {
         unsubscribe?.();
