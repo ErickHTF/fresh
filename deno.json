@@ -5,8 +5,8 @@
     "dev": "vite",
     "build": "vite build",
     "start": "deno serve -A _fresh/server.js",
-    "db:migrate": "deno run -A scripts/migrate.ts",
-    "db:seed": "deno run -A scripts/seed.ts",
+    "db:migrate": "deno run -A db/scripts/migrate.ts",
+    "db:seed": "deno run -A db/scripts/seed.ts",
     "test": "deno test -A",
     "update": "deno run -A -r jsr:@fresh/update ."
   },

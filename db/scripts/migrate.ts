@@ -1,9 +1,9 @@
 import postgres from "postgres";
-import { databaseUrl } from "../server/config.ts";
+import { databaseUrl } from "@/server/config.ts";
 
 const sql = postgres(databaseUrl);
 
-const migrationsDir = new URL("../db/migrations/", import.meta.url);
+const migrationsDir = new URL("../migrations/", import.meta.url);
 
 try {
   const files = [...Deno.readDirSync(migrationsDir)]

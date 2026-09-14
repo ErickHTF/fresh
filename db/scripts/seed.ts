@@ -1,9 +1,9 @@
 import postgres from "postgres";
-import { databaseUrl } from "../server/config.ts";
+import { databaseUrl } from "@/server/config.ts";
 
 const sql = postgres(databaseUrl);
 const seed = await Deno.readTextFile(
-  new URL("../db/seed/001_web_basics.sql", import.meta.url),
+  new URL("../seed/001_web_basics.sql", import.meta.url),
 );
 
 try {
