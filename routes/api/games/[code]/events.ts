@@ -1,8 +1,8 @@
-import { define } from "../../../../utils.ts";
 import { authorize } from "../../../../server/auth.ts";
 import { getCookie, playerCookieName } from "../../../../server/cookies.ts";
 import { subscribe } from "../../../../server/events.ts";
 import { getState } from "../../../../server/game.ts";
+import { define } from "../../../../utils.ts";
 
 const encoder = new TextEncoder();
 const heartbeatIntervalMs = 25000;

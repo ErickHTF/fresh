@@ -1,11 +1,11 @@
 import { useGameState } from "./useGameState.ts";
 
-interface LiveRankingProps {
+interface RankingProps {
   code: string;
-  nickname: string;
+  highlightPlayerId?: string;
 }
 
-export default function LiveRanking({ code, nickname }: LiveRankingProps) {
+export default function Ranking({ code, highlightPlayerId }: RankingProps) {
   const { state, error, connection } = useGameState(code);
   const players = state.value?.players ?? [];
   const hostNickname = state.value?.hostNickname;
@@ -17,9 +17,7 @@ export default function LiveRanking({ code, nickname }: LiveRankingProps) {
           <p class="eyebrow">Placar ao vivo</p>
           <h2>Ranking</h2>
         </div>
-        <span
-          class={`ranking-connection ranking-connection-${connection.value}`}
-        >
+        <span class={`ranking-connection ranking-${connection.value}`}>
           {connection.value === "online"
             ? "LIVE"
             : connection.value === "connecting"
@@ -50,7 +48,7 @@ export default function LiveRanking({ code, nickname }: LiveRankingProps) {
           {players.map((player, index) => (
             <li
               class={`rank-row ${
-                player.nickname === nickname ? "rank-row-current" : ""
+                player.id === highlightPlayerId ? "rank-row-current" : ""
               }`}
               key={player.id}
             >

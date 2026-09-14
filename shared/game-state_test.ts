@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@^1.0.0";
+import { assertEquals } from "@std/assert";
 import { calculatePoints, isDeadlineExpired } from "./game-state.ts";
 
 Deno.test("awards more points for faster correct answers", () => {

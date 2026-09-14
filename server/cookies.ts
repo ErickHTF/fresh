@@ -18,19 +18,19 @@ export function setSessionCookie(
 }
 
 export function hostCookieName(code: string): string {
-  return `fresh_host_${code.toUpperCase()}`;
+  return `fresh_host_${code}`;
 }
 
 export function playerCookieName(code: string): string {
-  return `fresh_player_${code.toUpperCase()}`;
+  return `fresh_player_${code}`;
 }
 
 export function nicknameCookieName(code: string): string {
-  return `fresh_nickname_${code.toUpperCase()}`;
+  return `fresh_nickname_${code}`;
 }
 
-export function orderCookieName(code: string): string {
-  return `fresh_order_${code.toUpperCase()}`;
+export function playerIdCookieName(code: string): string {
+  return `fresh_player_id_${code}`;
 }
 
 export function clearSessionCookies(headers: Headers, code: string): void {
@@ -38,7 +38,7 @@ export function clearSessionCookies(headers: Headers, code: string): void {
     hostCookieName(code),
     playerCookieName(code),
     nicknameCookieName(code),
-    orderCookieName(code),
+    playerIdCookieName(code),
   ];
   for (const name of names) {
     headers.append(

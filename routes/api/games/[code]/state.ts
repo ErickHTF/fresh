@@ -1,8 +1,8 @@
-import { define } from "../../../../utils.ts";
 import { authorize } from "../../../../server/auth.ts";
 import { getCookie, playerCookieName } from "../../../../server/cookies.ts";
 import { getState } from "../../../../server/game.ts";
 import { errorResponse, json } from "../../../../server/http.ts";
+import { define } from "../../../../utils.ts";
 
 export const handler = define.handlers({
   async GET(ctx) {

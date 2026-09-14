@@ -1,6 +1,6 @@
-import { define } from "../utils.ts";
-import { json } from "../server/http.ts";
 import { sql } from "../server/db.ts";
+import { json } from "../server/http.ts";
+import { define } from "../utils.ts";
 
 export const handler = define.handlers({
   async GET() {

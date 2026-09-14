@@ -1,9 +1,7 @@
 import postgres from "postgres";
+import { databaseUrl } from "../server/config.ts";
 
-const sql = postgres(
-  Deno.env.get("DATABASE_URL") ??
-    "postgres://fresh:fresh@localhost:5433/fresh_quiz",
-);
+const sql = postgres(databaseUrl);
 
 const migrationsDir = new URL("../db/migrations/", import.meta.url);
 

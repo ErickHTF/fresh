@@ -1,18 +1,17 @@
-import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { useEffect } from "preact/hooks";
 import { Countdown } from "../components/Countdown.tsx";
+import { LoadingState } from "../components/LoadingState.tsx";
 import { shuffleChoices } from "../shared/shuffle.ts";
+import { totalVotes, voteShare } from "../shared/votes.ts";
 import { useGameState } from "./useGameState.ts";
 
 interface PlayerGameProps {
   code: string;
-  nickname: string;
-  orderSeed: string;
+  playerId: string;
 }
 
-export default function PlayerGame(
-  { code, nickname, orderSeed }: PlayerGameProps,
-) {
+export default function PlayerGame({ code, playerId }: PlayerGameProps) {
   const { state, error } = useGameState(code);
   const selected = useSignal("");
   const submitted = useSignal(false);
@@ -66,28 +65,21 @@ export default function PlayerGame(
   const gameState = state.value;
   const current = gameState?.currentQuestion;
   const choices = current
-    ? shuffleChoices(current.choices, `${orderSeed}:${current.id}`)
+    ? shuffleChoices(current.choices, `${playerId || "player"}:${current.id}`)
     : [];
-  const player = gameState?.players.find((item) => item.nickname === nickname);
+  const player = gameState?.players.find((item) => item.id === playerId);
 
-  const answerCounts = current?.answerCounts ?? {};
-  const totalAnswers = Object.values(answerCounts).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
+  const answerCounts = current?.answerCounts;
+  const totalAnswers = totalVotes(answerCounts);
   const showVotes = gameState?.status === "question" && submitted.value &&
     totalAnswers > 0;
-  const shareOf = (choiceId: string) => {
-    if (totalAnswers === 0) return 0;
-    return Math.round(((answerCounts[choiceId] ?? 0) / totalAnswers) * 100);
-  };
 
   return (
     <section class="island island-player">
       <div class="game-header">
         <div>
           <p class="eyebrow">Você está jogando em</p>
-          <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">
+          <h1 class="island-title island-title-lg island-title-tight">
             {code}
           </h1>
         </div>
@@ -161,13 +153,17 @@ export default function PlayerGame(
                       <span class="vote-track">
                         <span
                           class="vote-fill"
-                          style={{ width: `${shareOf(choice.id)}%` }}
+                          style={{
+                            width: `${voteShare(answerCounts, choice.id)}%`,
+                          }}
                         />
                       </span>
                     )}
                   </span>
                   {showVotes && (
-                    <span class="vote-pct">{shareOf(choice.id)}%</span>
+                    <span class="vote-pct">
+                      {voteShare(answerCounts, choice.id)}%
+                    </span>
                   )}
                 </button>
               );
@@ -189,14 +185,5 @@ export default function PlayerGame(
         </div>
       )}
     </section>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div class="empty-state">
-      <span class="loader" />
-      <p>Carregando sala...</p>
-    </div>
   );
 }

@@ -50,17 +50,17 @@ export default function JoinGame({ initialCode = "" }: JoinGameProps) {
     >
       <div>
         <p class="eyebrow">Entrar em uma partida</p>
-        <h2 class="mt-2 text-2xl font-black text-slate-950">
+        <h2 class="island-title">
           Pronto para jogar?
         </h2>
-        <p class="mt-2 text-sm leading-6 text-slate-600">
+        <p class="island-copy">
           Use o código compartilhado pelo host e escolha um apelido.
         </p>
       </div>
       <label class="field-label">
         Código da sala
         <input
-          class="field uppercase"
+          class="field field-code"
           maxlength={6}
           placeholder="ABC123"
           value={code.value}
@@ -82,7 +82,7 @@ export default function JoinGame({ initialCode = "" }: JoinGameProps) {
       </label>
       {error.value && <p class="error-message">{error.value}</p>}
       <button
-        class="button button-primary w-full"
+        class="button button-primary button-block"
         disabled={loading.value}
         type="submit"
       >

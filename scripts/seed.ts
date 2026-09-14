@@ -1,10 +1,10 @@
 import postgres from "postgres";
+import { databaseUrl } from "../server/config.ts";
 
-const sql = postgres(
-  Deno.env.get("DATABASE_URL") ??
-    "postgres://fresh:fresh@localhost:5433/fresh_quiz",
+const sql = postgres(databaseUrl);
+const seed = await Deno.readTextFile(
+  new URL("../db/seed/001_web_basics.sql", import.meta.url),
 );
-const seed = await Deno.readTextFile("db/seed/001_web_basics.sql");
 
 try {
   await sql.unsafe(seed);

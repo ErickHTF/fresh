@@ -1,13 +1,13 @@
-import { define } from "../../../../utils.ts";
 import {
   nicknameCookieName,
-  orderCookieName,
   playerCookieName,
+  playerIdCookieName,
   setSessionCookie,
 } from "../../../../server/cookies.ts";
-import { joinGame } from "../../../../server/game.ts";
 import { notify } from "../../../../server/events.ts";
+import { joinGame } from "../../../../server/game.ts";
 import { body, errorResponse, json } from "../../../../server/http.ts";
+import { define } from "../../../../utils.ts";
 
 interface JoinBody {
   nickname?: string;
@@ -32,7 +32,7 @@ export const handler = define.handlers({
       );
       setSessionCookie(
         response.headers,
-        orderCookieName(session.code),
+        playerIdCookieName(session.code),
         session.playerId,
       );
       await notify(session.code);

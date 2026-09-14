@@ -11,7 +11,7 @@ export default define.page(function HostIndex() {
       </Head>
       <div class="shell shell-small">
         <Brand />
-        <div class="mx-auto mt-16 max-w-lg">
+        <div class="landing-shell">
           <HostLanding />
         </div>
       </div>

@@ -1,8 +1,8 @@
-import { define } from "../../../../utils.ts";
 import { getCookie, playerCookieName } from "../../../../server/cookies.ts";
 import { notify } from "../../../../server/events.ts";
 import { submitAnswer, verifyPlayer } from "../../../../server/game.ts";
 import { body, errorResponse, json } from "../../../../server/http.ts";
+import { define } from "../../../../utils.ts";
 
 interface AnswerBody {
   choiceId?: string;
@@ -17,7 +17,7 @@ export const handler = define.handlers({
         return json({ error: "Apenas jogadores podem responder." }, 403);
       }
       const { choiceId } = await body<AnswerBody>(ctx.req);
-      if (!token || !choiceId) {
+      if (!choiceId) {
         return json({ error: "Alternativa obrigatória." }, 422);
       }
       await submitAnswer(code, token, choiceId);

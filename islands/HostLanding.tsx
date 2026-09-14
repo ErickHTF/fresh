@@ -35,10 +35,10 @@ export default function HostLanding() {
     >
       <div>
         <p class="eyebrow">Modo host</p>
-        <h1 class="mt-2 text-3xl font-black text-slate-950">
+        <h1 class="island-title island-title-lg">
           Crie uma sala e compartilhe o código.
         </h1>
-        <p class="mt-3 text-sm leading-6 text-slate-600">
+        <p class="island-copy island-copy-lg">
           Seu nome aparecerá em destaque para os jogadores.
         </p>
       </div>
@@ -55,7 +55,7 @@ export default function HostLanding() {
       </label>
       {error.value && <p class="error-message">{error.value}</p>}
       <button
-        class="button button-primary w-full"
+        class="button button-primary button-block"
         disabled={loading.value}
         type="submit"
       >

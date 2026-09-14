@@ -1,7 +1,7 @@
 import { Head } from "fresh/runtime";
-import { define } from "../utils.ts";
 import { Brand } from "../components/Brand.tsx";
 import JoinGame from "../islands/JoinGame.tsx";
+import { define } from "../utils.ts";
 
 export default define.page(function Home() {
   return (
@@ -10,10 +10,10 @@ export default define.page(function Home() {
         <title>Fresh Quiz | Aprenda jogando</title>
       </Head>
       <div class="shell">
-        <header class="flex items-center justify-between">
+        <header class="home-header">
           <Brand />
           <a
-            class="text-sm font-bold text-slate-600 transition hover:text-slate-950"
+            class="home-link"
             href="/host"
           >
             Criar partida
@@ -23,7 +23,7 @@ export default define.page(function Home() {
           <div class="hero-copy">
             <p class="eyebrow">Aprendizado em tempo real</p>
             <h1>
-              Conhecimento que vira <span class="text-coral">jogo.</span>
+              Conhecimento que vira <span class="text-accent">jogo.</span>
             </h1>
             <p class="hero-description">
               Um quiz colaborativo sobre desenvolvimento web, feito com Fresh,

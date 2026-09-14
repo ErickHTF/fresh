@@ -1,5 +1,5 @@
-import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { useEffect } from "preact/hooks";
 
 interface CountdownProps {
   deadlineAt: string | null;

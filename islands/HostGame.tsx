@@ -1,7 +1,9 @@
-import { useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
+import { useEffect } from "preact/hooks";
 import { Countdown } from "../components/Countdown.tsx";
+import { LoadingState } from "../components/LoadingState.tsx";
 import type { GameState } from "../shared/types.ts";
+import { totalVotes, voteShare } from "../shared/votes.ts";
 import { useGameState } from "./useGameState.ts";
 
 interface HostGameProps {
@@ -69,15 +71,8 @@ export default function HostGame({ code }: HostGameProps) {
   const gameState = state.value;
   const current = gameState?.currentQuestion;
 
-  const answerCounts = current?.answerCounts ?? {};
-  const totalAnswers = Object.values(answerCounts).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-  const shareOf = (choiceId: string) => {
-    if (totalAnswers === 0) return 0;
-    return Math.round(((answerCounts[choiceId] ?? 0) / totalAnswers) * 100);
-  };
+  const answerCounts = current?.answerCounts;
+  const totalAnswers = totalVotes(answerCounts);
   const showVotes = Boolean(current?.answerCounts);
 
   const actionLabel = gameState?.status === "lobby"
@@ -93,7 +88,7 @@ export default function HostGame({ code }: HostGameProps) {
       <div class="game-header">
         <div>
           <p class="eyebrow">Você conduz em</p>
-          <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">
+          <h1 class="island-title island-title-lg island-title-tight">
             {code}
           </h1>
         </div>
@@ -169,13 +164,17 @@ export default function HostGame({ code }: HostGameProps) {
                     <span class="vote-track">
                       <span
                         class="vote-fill"
-                        style={{ width: `${shareOf(choice.id)}%` }}
+                        style={{
+                          width: `${voteShare(answerCounts, choice.id)}%`,
+                        }}
                       />
                     </span>
                   )}
                 </span>
                 {showVotes && (
-                  <span class="vote-pct">{shareOf(choice.id)}%</span>
+                  <span class="vote-pct">
+                    {voteShare(answerCounts, choice.id)}%
+                  </span>
                 )}
               </div>
             ))}
@@ -191,7 +190,7 @@ export default function HostGame({ code }: HostGameProps) {
             <p>Confira o ranking final na island ao lado.</p>
           </div>
           <button
-            class="button button-primary w-full"
+            class="button button-primary button-block"
             disabled={loading.value}
             onClick={restartQuiz}
             type="button"
@@ -212,7 +211,7 @@ export default function HostGame({ code }: HostGameProps) {
             )
             : (
               <button
-                class="button button-primary flex-1"
+                class="button button-primary button-grow"
                 disabled={loading.value ||
                   (gameState.status === "lobby" &&
                     gameState.players.length === 0)}
@@ -248,13 +247,4 @@ function statusLabel(status: GameState["status"]): string {
     reveal: "Resultado",
     finished: "Final",
   }[status];
-}
-
-function LoadingState() {
-  return (
-    <div class="empty-state">
-      <span class="loader" />
-      <p>Carregando sala...</p>
-    </div>
-  );
 }

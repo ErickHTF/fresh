@@ -1,9 +1,7 @@
 import postgres from "postgres";
+import { databaseUrl } from "./config.ts";
 
-const connectionString = Deno.env.get("DATABASE_URL") ??
-  "postgres://fresh:fresh@localhost:5433/fresh_quiz";
-
-export const sql = postgres(connectionString, {
+export const sql = postgres(databaseUrl, {
   max: 10,
   idle_timeout: 20,
 });

@@ -1,0 +1,2 @@
+export const databaseUrl = Deno.env.get("DATABASE_URL") ??
+  "postgres://fresh:fresh@localhost:5433/fresh_quiz";

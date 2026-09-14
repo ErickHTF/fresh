@@ -33,8 +33,12 @@ function createToken(): string {
   return crypto.randomUUID();
 }
 
+const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
 function createCode(): string {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(bytes, (byte) => codeAlphabet[byte % codeAlphabet.length])
+    .join("");
 }
 
 const revealTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -106,7 +110,7 @@ async function getGame(code: string): Promise<GameRow | null> {
     SELECT id, quiz_id, code, host_token, host_nickname, status,
       current_question_position, question_started_at, question_deadline_at
     FROM games
-    WHERE code = ${code.toUpperCase()}
+    WHERE code = ${code}
   `;
   return rows[0] ?? null;
 }
@@ -207,7 +211,7 @@ export async function verifyPlayer(
     FROM players p
     JOIN game_players gp ON gp.player_id = p.id
     JOIN games g ON g.id = gp.game_id
-    WHERE g.code = ${code.toUpperCase()} AND p.player_token = ${playerToken}
+    WHERE g.code = ${code} AND p.player_token = ${playerToken}
   `;
   return Boolean(rows[0]);
 }

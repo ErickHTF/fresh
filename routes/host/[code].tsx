@@ -2,7 +2,7 @@ import { Head } from "fresh/runtime";
 import { DevToolsGuide } from "../../components/DevToolsGuide.tsx";
 import { StaticNotice } from "../../components/StaticNotice.tsx";
 import HostGame from "../../islands/HostGame.tsx";
-import HostRanking from "../../islands/HostRanking.tsx";
+import Ranking from "../../islands/Ranking.tsx";
 import { define } from "../../utils.ts";
 
 export default define.page(function HostGamePage(ctx) {
@@ -16,10 +16,10 @@ export default define.page(function HostGamePage(ctx) {
         <div class="game-layout">
           <DevToolsGuide />
           <HostGame code={code} />
-          <HostRanking code={code} />
+          <Ranking code={code} />
         </div>
-        <StaticNotice />
       </main>
+      <StaticNotice />
     </>
   );
 });
