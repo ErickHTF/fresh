@@ -1,4 +1,6 @@
 import { Head } from "fresh/runtime";
+import { DevToolsGuide } from "../../components/DevToolsGuide.tsx";
+import { StaticNotice } from "../../components/StaticNotice.tsx";
 import LiveRanking from "../../islands/LiveRanking.tsx";
 import PlayerGame from "../../islands/PlayerGame.tsx";
 import {
@@ -19,9 +21,11 @@ export default define.page(function PlayerGamePage(ctx) {
       </Head>
       <main class="shell">
         <div class="game-layout">
+          <DevToolsGuide />
           <PlayerGame code={code} nickname={nickname} orderSeed={orderSeed} />
           <LiveRanking code={code} nickname={nickname} />
         </div>
+        <StaticNotice />
       </main>
     </>
   );

@@ -76,7 +76,8 @@ button:disabled {
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns:
+    minmax(230px, 260px) minmax(0, 1fr) minmax(260px, 300px);
   align-items: start;
   gap: 1rem;
 }
@@ -191,7 +192,12 @@ button:disabled {
   --island-accent: var(--teal);
 }
 
-.ranking-island {
+.island-guide {
+  --island-accent: var(--ink);
+}
+
+.ranking-island,
+.guide-island {
   position: sticky;
   top: 1.5rem;
 }
@@ -721,7 +727,102 @@ button:disabled {
   }
 }
 
+/* ---------- Guia de inspeção ---------- */
+
+.guide-title {
+  margin: .35rem 0 0;
+  color: var(--ink);
+  font-family: Georgia, ui-serif, serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.guide-steps {
+  list-style: decimal;
+  padding-left: 1.1rem;
+  color: var(--ink);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.guide-steps li + li {
+  margin-top: .5rem;
+}
+
+.guide-steps li::marker {
+  color: var(--purple);
+  font-weight: 950;
+}
+
+.guide-code {
+  border-radius: .35rem;
+  background: #f4f5f0;
+  padding: .1rem .35rem;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .7rem;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Aviso estático ---------- */
+
+.static-notice {
+  --island-accent: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .8rem;
+  margin-top: 1rem;
+}
+
+.static-notice > * + * {
+  margin-top: 0;
+}
+
+.static-notice-tag {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--ink);
+  padding: .3rem .7rem;
+  color: white;
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.static-notice p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.static-notice strong {
+  color: var(--ink);
+}
+
+.static-notice-hint {
+  display: block;
+  margin-top: .25rem;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
 /* ---------- Responsivo ---------- */
+
+@media (max-width: 1040px) {
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  }
+
+  .guide-island {
+    position: static;
+    grid-column: 1 / -1;
+    order: 1;
+  }
+}
 
 @media (max-width: 800px) {
   .hero-grid,
