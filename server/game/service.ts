@@ -276,6 +276,21 @@ export async function submitAnswer(
   return points;
 }
 
+export async function skipQuestion(code: string): Promise<void> {
+  const game = await getGame(code);
+  if (!game) throw new Error("Sala não encontrada.");
+  if (game.status !== "question") {
+    throw new Error("Não há pergunta em andamento para pular.");
+  }
+
+  cancelReveal(game.id);
+  await sql`
+    UPDATE games
+    SET status = 'reveal', question_deadline_at = NULL
+    WHERE id = ${game.id} AND status = 'question'
+  `;
+}
+
 export async function advanceGame(code: string): Promise<void> {
   const game = await getGame(code);
   if (!game) throw new Error("Sala não encontrada.");

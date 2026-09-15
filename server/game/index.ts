@@ -6,6 +6,7 @@ export {
   getState,
   joinGame,
   restartGame,
+  skipQuestion,
   startGame,
   type StateViewer,
   submitAnswer,
