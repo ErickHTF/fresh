@@ -20,7 +20,7 @@ export default function HostGame({ code }: HostGameProps) {
   }, [code]);
 
   async function action(
-    path: "start" | "next" | "finish" | "restart" | "leave",
+    path: "start" | "next" | "finish" | "restart" | "leave" | "skip",
   ) {
     loading.value = true;
     actionError.value = "";
@@ -161,21 +161,21 @@ export default function HostGame({ code }: HostGameProps) {
                 <span class="choice-body">
                   <span>{choice.label}</span>
                   {showVotes && (
-                    <span class="vote-track">
-                      <span
-                        class="vote-fill"
-                        style={{
-                          width: `${voteShare(answerCounts, choice.id)}%`,
-                        }}
-                      />
+                    <span class="vote-row">
+                      <span class="vote-track">
+                        <span
+                          class="vote-fill"
+                          style={{
+                            width: `${voteShare(answerCounts, choice.id)}%`,
+                          }}
+                        />
+                      </span>
+                      <span class="vote-pct">
+                        {voteShare(answerCounts, choice.id)}%
+                      </span>
                     </span>
                   )}
                 </span>
-                {showVotes && (
-                  <span class="vote-pct">
-                    {voteShare(answerCounts, choice.id)}%
-                  </span>
-                )}
               </div>
             ))}
           </div>
@@ -224,6 +224,16 @@ export default function HostGame({ code }: HostGameProps) {
                 {loading.value ? "Atualizando..." : actionLabel}
               </button>
             )}
+          {gameState.status === "question" && (
+            <button
+              class="button button-ghost"
+              disabled={loading.value}
+              onClick={() => void action("skip")}
+              type="button"
+            >
+              Pular pergunta
+            </button>
+          )}
           {gameState.status !== "lobby" && (
             <button
               class="button button-danger"

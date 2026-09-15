@@ -150,21 +150,21 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
                   <span class="choice-body">
                     <span>{choice.label}</span>
                     {showVotes && (
-                      <span class="vote-track">
-                        <span
-                          class="vote-fill"
-                          style={{
-                            width: `${voteShare(answerCounts, choice.id)}%`,
-                          }}
-                        />
+                      <span class="vote-row">
+                        <span class="vote-track">
+                          <span
+                            class="vote-fill"
+                            style={{
+                              width: `${voteShare(answerCounts, choice.id)}%`,
+                            }}
+                          />
+                        </span>
+                        <span class="vote-pct">
+                          {voteShare(answerCounts, choice.id)}%
+                        </span>
                       </span>
                     )}
                   </span>
-                  {showVotes && (
-                    <span class="vote-pct">
-                      {voteShare(answerCounts, choice.id)}%
-                    </span>
-                  )}
                 </button>
               );
             })}

@@ -107,6 +107,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 :focus-visible {
@@ -118,6 +119,7 @@ body {
 
 .page-background {
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 9% 12%, var(--yellow-glow), transparent 18rem),
     radial-gradient(circle at 92% 90%, var(--green-glow), transparent 24rem),
@@ -212,6 +214,7 @@ body {
   align-items: center;
   gap: 5rem;
   min-height: calc(100vh - 7rem);
+  min-height: calc(100dvh - 7rem);
 }
 
 .hero-copy h1 {
@@ -234,6 +237,7 @@ body {
 
 .hero-stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
   margin-top: 2.5rem;
   color: var(--muted);
@@ -480,6 +484,7 @@ body {
   font-weight: 900;
   letter-spacing: -.01em;
   line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
 .question-hint {
@@ -499,7 +504,7 @@ body {
 
 .choice-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .8rem;
 }
 
@@ -507,6 +512,7 @@ body {
   display: flex;
   align-items: center;
   gap: .8rem;
+  min-width: 0;
   min-height: 4.2rem;
   border: 1px solid var(--line);
   border-radius: .8rem;
@@ -574,10 +580,19 @@ body {
   min-width: 0;
   flex-direction: column;
   gap: .5rem;
+  overflow-wrap: break-word;
+}
+
+.vote-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
 }
 
 .vote-track {
   display: block;
+  flex: 1;
+  min-width: 0;
   height: .45rem;
   border-radius: 999px;
   background: var(--purple-track);
@@ -594,7 +609,7 @@ body {
 
 .vote-pct {
   flex: 0 0 auto;
-  min-width: 2.8rem;
+  min-width: 2.4rem;
   color: var(--purple);
   font-size: .8rem;
   font-weight: 950;
@@ -972,7 +987,7 @@ body {
 
   .hero-grid {
     min-height: auto;
-    padding: 5rem 0 3rem;
+    padding: 3rem 0 2.5rem;
   }
 
   .hero-copy h1 {
@@ -982,7 +997,6 @@ body {
   .ranking-island {
     position: relative;
     top: auto;
-    order: -1;
   }
 }
 
@@ -992,8 +1006,17 @@ body {
     padding-top: 1.25rem;
   }
 
+  .home-header {
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+  }
+
+  .landing-shell {
+    margin-top: 2.5rem;
+  }
+
   .choice-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .game-header h1 {
@@ -1001,9 +1024,22 @@ body {
   }
 
   .game-header,
-  .question-meta,
-  .actions-row {
+  .question-meta {
     flex-wrap: wrap;
+  }
+
+  .actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-ghost {
+    padding: .7rem .9rem;
+  }
+
+  .votes-summary {
+    flex-wrap: wrap;
+    gap: .25rem 1rem;
   }
 }
 
