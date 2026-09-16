@@ -42,7 +42,7 @@ export default function () {
   const createRes = http.post(
     `${BASE_URL}/api/games`,
     JSON.stringify({ nickname: generateNickname() }),
-    { headers }
+    { headers },
   );
 
   const created = check(createRes, { "criar: 200": (r) => r.status === 200 });
@@ -59,7 +59,7 @@ export default function () {
   const joinRes = http.post(
     `${BASE_URL}/api/games/${code}/join`,
     JSON.stringify({ nickname: generateNickname() }),
-    { headers }
+    { headers },
   );
 
   const joined = check(joinRes, { "entrar: 200": (r) => r.status === 200 });
@@ -97,10 +97,12 @@ export default function () {
             "Content-Type": "application/json",
             Cookie: `fresh_player_${code}=${playerToken}`,
           },
-        }
+        },
       );
 
-      const answered = check(answerRes, { "responder: 200": (r) => r.status === 200 });
+      const answered = check(answerRes, {
+        "responder: 200": (r) => r.status === 200,
+      });
       successRate.add(answered);
       responseTime.add(answerRes.timings.duration);
 
@@ -120,13 +122,33 @@ export default function () {
 
 export function handleSummary(data) {
   console.log("\n========== TESTE REALISTA - RESUMO ==========");
-  console.log(`Total requisições: ${data.metrics.http_reqs?.values?.count || 0}`);
-  console.log(`Taxa de erro: ${((data.metrics.http_req_failed?.values?.rate || 0) * 100).toFixed(2)}%`);
-  console.log(`Duração média: ${data.metrics.http_req_duration?.values?.avg?.toFixed(2) || 0}ms`);
-  console.log(`P95: ${data.metrics.http_req_duration?.values?.["p(95)"]?.toFixed(2) || 0}ms`);
-  console.log(`Games criados: ${data.metrics.games_created?.values?.count || 0}`);
-  console.log(`Jogadores entraram: ${data.metrics.players_joined?.values?.count || 0}`);
-  console.log(`Respostas enviadas: ${data.metrics.answers_submitted?.values?.count || 0}`);
+  console.log(
+    `Total requisições: ${data.metrics.http_reqs?.values?.count || 0}`,
+  );
+  console.log(
+    `Taxa de erro: ${
+      ((data.metrics.http_req_failed?.values?.rate || 0) * 100).toFixed(2)
+    }%`,
+  );
+  console.log(
+    `Duração média: ${
+      data.metrics.http_req_duration?.values?.avg?.toFixed(2) || 0
+    }ms`,
+  );
+  console.log(
+    `P95: ${
+      data.metrics.http_req_duration?.values?.["p(95)"]?.toFixed(2) || 0
+    }ms`,
+  );
+  console.log(
+    `Games criados: ${data.metrics.games_created?.values?.count || 0}`,
+  );
+  console.log(
+    `Jogadores entraram: ${data.metrics.players_joined?.values?.count || 0}`,
+  );
+  console.log(
+    `Respostas enviadas: ${data.metrics.answers_submitted?.values?.count || 0}`,
+  );
   console.log("==============================================\n");
 
   return {};
