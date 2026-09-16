@@ -12,11 +12,13 @@ export default define.page(function HostGamePage(ctx) {
       <Head>
         <title>Sala {code} | Fresh Quiz</title>
       </Head>
-      <main class="shell">
-        <div class="game-layout">
-          <DevToolsGuide />
-          <HostGame code={code} />
-          <Ranking code={code} />
+      <main class="page-background">
+        <div class="shell">
+          <div class="game-layout">
+            <DevToolsGuide />
+            <HostGame code={code} />
+            <Ranking code={code} />
+          </div>
         </div>
       </main>
       <StaticNotice />

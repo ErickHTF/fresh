@@ -2,6 +2,7 @@ import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { Countdown } from "@/components/Countdown.tsx";
 import { LoadingState } from "@/components/LoadingState.tsx";
+import { Podium } from "@/components/Podium.tsx";
 import type { GameState } from "@/shared/types.ts";
 import { totalVotes, voteShare } from "@/shared/votes.ts";
 import { useGameState } from "./useGameState.ts";
@@ -110,7 +111,7 @@ export default function HostGame({ code }: HostGameProps) {
 
       {gameState?.status === "lobby" && (
         <div class="empty-state">
-          <span class="empty-icon">01</span>
+          <span class="empty-icon glow-element">01</span>
           <h2>Aguardando jogadores</h2>
           <p>
             Compartilhe o código da sala e comece quando todos estiverem
@@ -185,9 +186,10 @@ export default function HostGame({ code }: HostGameProps) {
       {gameState?.status === "finished" && (
         <>
           <div class="empty-state">
-            <span class="empty-icon">OK</span>
+            <span class="empty-icon">🏆</span>
             <h2>Quiz encerrado</h2>
-            <p>Confira o ranking final na island ao lado.</p>
+            <p>Parabéns! Veja o Top 3 do quiz:</p>
+            <Podium players={gameState.players} />
           </div>
           <button
             class="button button-primary button-block"
@@ -202,28 +204,21 @@ export default function HostGame({ code }: HostGameProps) {
 
       {gameState && gameState.status !== "finished" && (
         <div class="actions-row">
-          {gameState.status === "question"
-            ? (
-              <p class="question-hint">
-                As respostas serão reveladas automaticamente quando o tempo
-                acabar.
-              </p>
-            )
-            : (
-              <button
-                class="button button-primary button-grow"
-                disabled={loading.value ||
-                  (gameState.status === "lobby" &&
-                    gameState.players.length === 0)}
-                onClick={() =>
-                  void action(
-                    gameState.status === "lobby" ? "start" : "next",
-                  )}
-                type="button"
-              >
-                {loading.value ? "Atualizando..." : actionLabel}
-              </button>
-            )}
+          {gameState.status !== "question" && (
+            <button
+              class="button button-primary button-grow"
+              disabled={loading.value ||
+                (gameState.status === "lobby" &&
+                  gameState.players.length === 0)}
+              onClick={() =>
+                void action(
+                  gameState.status === "lobby" ? "start" : "next",
+                )}
+              type="button"
+            >
+              {loading.value ? "Atualizando..." : actionLabel}
+            </button>
+          )}
           {gameState.status === "question" && (
             <button
               class="button button-ghost"

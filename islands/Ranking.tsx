@@ -1,3 +1,6 @@
+import { useSignal } from "@preact/signals";
+import { useEffect, useRef } from "preact/hooks";
+import type { PlayerSummary } from "@/shared/types.ts";
 import { useGameState } from "./useGameState.ts";
 
 interface RankingProps {
@@ -5,10 +8,62 @@ interface RankingProps {
   highlightPlayerId?: string;
 }
 
+// Referência estável: `?? []` criaria um array novo a cada render,
+// re-executando o efeito abaixo sem necessidade enquanto o estado carrega.
+const NO_PLAYERS: PlayerSummary[] = [];
+
 export default function Ranking({ code, highlightPlayerId }: RankingProps) {
   const { state, error, connection } = useGameState(code);
-  const players = state.value?.players ?? [];
+  const players = state.value?.players ?? NO_PLAYERS;
   const hostNickname = state.value?.hostNickname;
+  const slideUpPlayers = useSignal<Set<string>>(new Set());
+  const glowPlayers = useSignal<Set<string>>(new Set());
+  const scorePopPlayers = useSignal<Set<string>>(new Set());
+  const prevPositionsRef = useRef<Map<string, number>>(new Map());
+  const prevScoresRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const status = state.value?.status;
+
+    if (status === "question") {
+      // Só escreve quando há o que limpar: atribuir um Set novo sempre
+      // notifica os signals e força re-render a cada push de estado.
+      if (slideUpPlayers.value.size > 0) slideUpPlayers.value = new Set();
+      if (glowPlayers.value.size > 0) glowPlayers.value = new Set();
+      if (scorePopPlayers.value.size > 0) scorePopPlayers.value = new Set();
+    }
+
+    if (status === "reveal") {
+      const slidUp = new Set<string>();
+      const glowing = new Set<string>();
+      const popping = new Set<string>();
+
+      for (let i = 0; i < players.length; i++) {
+        const p = players[i];
+        const prevPos = prevPositionsRef.current.get(p.id) ?? i;
+        const prevScore = prevScoresRef.current.get(p.id) ?? 0;
+
+        if (i < prevPos) slidUp.add(p.id);
+        if (p.score > prevScore) {
+          glowing.add(p.id);
+          popping.add(p.id);
+        }
+      }
+
+      if (slidUp.size > 0) slideUpPlayers.value = slidUp;
+      if (glowing.size > 0) glowPlayers.value = glowing;
+      if (popping.size > 0) scorePopPlayers.value = popping;
+    }
+
+    const posSnapshot = new Map<string, number>();
+    const scoreSnapshot = new Map<string, number>();
+    for (let i = 0; i < players.length; i++) {
+      posSnapshot.set(players[i].id, i);
+      scoreSnapshot.set(players[i].id, players[i].score);
+    }
+    prevPositionsRef.current = posSnapshot;
+    prevScoresRef.current = scoreSnapshot;
+  }, [state.value?.status, players]);
 
   return (
     <aside class="island island-ranking ranking-island">
@@ -49,12 +104,20 @@ export default function Ranking({ code, highlightPlayerId }: RankingProps) {
             <li
               class={`rank-row ${
                 player.id === highlightPlayerId ? "rank-row-current" : ""
+              } ${slideUpPlayers.value.has(player.id) ? "row-slide-up" : ""} ${
+                glowPlayers.value.has(player.id) ? "row-glow" : ""
               }`}
               key={player.id}
             >
               <span class="rank-number">{index + 1}</span>
               <span class="rank-name">{player.nickname}</span>
-              <span class="rank-score">{player.score}</span>
+              <span
+                class={`rank-score ${
+                  scorePopPlayers.value.has(player.id) ? "rank-pop" : ""
+                }`}
+              >
+                {player.score}
+              </span>
             </li>
           ))}
         </ol>

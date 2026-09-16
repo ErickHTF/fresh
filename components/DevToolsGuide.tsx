@@ -19,7 +19,7 @@ export function DevToolsGuide() {
         </li>
         <li>
           Cada <code class="guide-code">state</code>{" "}
-          em JSON chega nessa conexão já aberta, sem recarregar a página.
+          em JSON chega nessa conexão já aberta, sem recarregar a página toda.
         </li>
         <li>
           Quando o tempo acaba, a revelação chega como um novo{" "}

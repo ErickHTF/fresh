@@ -1,7 +1,8 @@
 import { useSignal } from "@preact/signals";
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import { Countdown } from "@/components/Countdown.tsx";
 import { LoadingState } from "@/components/LoadingState.tsx";
+import { Podium } from "@/components/Podium.tsx";
 import { shuffleChoices } from "@/shared/shuffle.ts";
 import { totalVotes, voteShare } from "@/shared/votes.ts";
 import { useGameState } from "./useGameState.ts";
@@ -18,6 +19,10 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
   const feedback = useSignal("");
   const lastQuestion = useSignal("");
   const timeExpired = useSignal(false);
+  const scoreAnimating = useSignal(false);
+  const earnedPoints = useSignal(0);
+  const floatKey = useSignal(0);
+  const prevScoreRef = useRef(0);
 
   useEffect(() => {
     const questionId = state.value?.currentQuestion?.id ?? "";
@@ -29,6 +34,22 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
       timeExpired.value = false;
     }
   }, [state.value?.currentQuestion?.id]);
+
+  useEffect(() => {
+    const player = state.value?.players.find((item) => item.id === playerId);
+    const currentScore = player?.score ?? 0;
+    // O diff precisa ser capturado antes de atualizar o ref, senão qualquer
+    // push de estado durante o reveal re-dispara a animação com pontos errados.
+    const gained = currentScore - prevScoreRef.current;
+    prevScoreRef.current = currentScore;
+    if (state.value?.status === "reveal" && gained > 0) {
+      earnedPoints.value = gained;
+      floatKey.value += 1;
+      scoreAnimating.value = true;
+      const timer = setTimeout(() => scoreAnimating.value = false, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [state.value?.status, state.value?.players]);
 
   async function answer(choiceId: string) {
     if (
@@ -84,7 +105,16 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
           </h1>
         </div>
         <div class="header-actions">
-          <span class="score-pill">{player?.score ?? 0} pts</span>
+          <span
+            class={`score-pill ${scoreAnimating.value ? "score-bounce" : ""}`}
+          >
+            {player?.score ?? 0} pts
+            {scoreAnimating.value && (
+              <span class="points-float" key={floatKey.value}>
+                +{earnedPoints.value}
+              </span>
+            )}
+          </span>
           <button
             class="button button-ghost"
             onClick={() => void leaveRoom()}
@@ -105,7 +135,7 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
 
       {gameState?.status === "lobby" && (
         <div class="empty-state">
-          <span class="empty-icon">02</span>
+          <span class="empty-icon glow-element">02</span>
           <h2>Você entrou!</h2>
           <p>Aguarde o host começar o quiz.</p>
         </div>
@@ -181,7 +211,8 @@ export default function PlayerGame({ code, playerId }: PlayerGameProps) {
         <div class="empty-state empty-state-compact">
           <span class="empty-icon">🏆</span>
           <h2>Fim de jogo</h2>
-          <p>Veja sua posição no ranking ao lado.</p>
+          <p>Parabéns! Veja o Top 3 do quiz:</p>
+          <Podium players={gameState.players} highlightPlayerId={playerId} />
         </div>
       )}
     </section>

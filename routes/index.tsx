@@ -23,7 +23,8 @@ export default define.page(function Home() {
           <div class="hero-copy">
             <p class="eyebrow">Aprendizado em tempo real</p>
             <h1>
-              Conhecimento que vira <span class="text-accent">jogo.</span>
+              Conhecimento que vira{" "}
+              <span class="text-accent text-gradient">jogo.</span>
             </h1>
             <p class="hero-description">
               Um quiz colaborativo sobre desenvolvimento web, feito com Fresh,

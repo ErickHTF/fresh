@@ -14,11 +14,13 @@ export default define.page(function PlayerGamePage(ctx) {
       <Head>
         <title>Jogar {code} | Fresh Quiz</title>
       </Head>
-      <main class="shell">
-        <div class="game-layout">
-          <DevToolsGuide />
-          <PlayerGame code={code} playerId={playerId} />
-          <Ranking code={code} highlightPlayerId={playerId} />
+      <main class="page-background">
+        <div class="shell">
+          <div class="game-layout">
+            <DevToolsGuide />
+            <PlayerGame code={code} playerId={playerId} />
+            <Ranking code={code} highlightPlayerId={playerId} />
+          </div>
         </div>
       </main>
       <StaticNotice />
